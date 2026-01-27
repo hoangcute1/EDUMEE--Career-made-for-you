@@ -1,0 +1,203 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  # ==========================================
+  # Lint & Type Check
+  # ==========================================
+  lint:
+    name: Lint & Type Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install backend dependencies
+        working-directory: ./be
+        run: npm ci
+
+      - name: Install frontend dependencies
+        working-directory: ./fe
+        run: npm ci
+
+      - name: Lint Backend
+        working-directory: ./be
+        run: npm run lint
+
+      - name: Lint Frontend
+        working-directory: ./fe
+        run: npm run lint
+
+  # ==========================================
+  # Backend Tests
+  # ==========================================
+  test-backend:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+    needs: lint
+
+    services:
+      mongodb:
+        image: mongo:7.0
+        ports:
+          - 27017:27017
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        working-directory: ./be
+        run: npm ci
+
+      - name: Run tests
+        working-directory: ./be
+        run: npm run test:cov
+        env:
+          MONGODB_URI: mongodb://localhost:27017/edumee_test
+          JWT_SECRET: test-secret-key
+          JWT_REFRESH_SECRET: test-refresh-secret
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          directory: ./be/coverage
+          flags: backend
+          fail_ci_if_error: false
+
+  # ==========================================
+  # Build Backend
+  # ==========================================
+  build-backend:
+    name: Build Backend
+    runs-on: ubuntu-latest
+    needs: [lint, test-backend]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        working-directory: ./be
+        run: npm ci
+
+      - name: Build
+        working-directory: ./be
+        run: npm run build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-dist
+          path: ./be/dist
+          retention-days: 7
+
+  # ==========================================
+  # Build Frontend
+  # ==========================================
+  build-frontend:
+    name: Build Frontend
+    runs-on: ubuntu-latest
+    needs: lint
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        working-directory: ./fe
+        run: npm ci
+
+      - name: Build
+        working-directory: ./fe
+        run: npm run build
+        env:
+          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL || 'http://localhost:3001' }}
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build
+          path: ./fe/.next
+          retention-days: 7
+
+  # ==========================================
+  # Docker Build (Only on main branch)
+  # ==========================================
+  docker-build:
+    name: Build Docker Images
+    runs-on: ubuntu-latest
+    needs: [build-backend, build-frontend]
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+        if: github.event_name != 'pull_request'
+
+      - name: Build Backend Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./be
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/edumee-backend:latest
+            ${{ secrets.DOCKER_USERNAME }}/edumee-backend:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build Frontend Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./fe
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/edumee-frontend:latest
+            ${{ secrets.DOCKER_USERNAME }}/edumee-frontend:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

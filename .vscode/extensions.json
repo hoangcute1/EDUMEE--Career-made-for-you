@@ -1,0 +1,19 @@
+{
+  "recommendations": [
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "bradlc.vscode-tailwindcss",
+    "mongodb.mongodb-vscode",
+    "ms-azuretools.vscode-docker",
+    "eamodio.gitlens",
+    "usernamehw.errorlens",
+    "streetsidesoftware.code-spell-checker",
+    "aaron-bond.better-comments",
+    "christian-kohler.path-intellisense",
+    "formulahendry.auto-rename-tag",
+    "prisma.prisma",
+    "ms-vscode.vscode-typescript-next",
+    "yoavbls.pretty-ts-errors",
+    "mikestead.dotenv"
+  ]
+}

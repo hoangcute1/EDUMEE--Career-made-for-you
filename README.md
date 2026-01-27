@@ -2,11 +2,11 @@
 
 <div align="center">
 
-![EDUMEE Logo](./docs/logo.png)
+![EDUMEE Logo](./docs/Logo-exe.jpg)
 
 **Nền tảng hướng nghiệp và phát triển sự nghiệp cho giới trẻ Việt Nam**
 
-[![CI/CD](https://github.com/yourusername/edumee/workflows/CI%2FCD%20Pipeline/badge.svg)](https://github.com/yourusername/edumee/actions)
+
 [![License](https://img.shields.io/badge/license-UNLICENSED-red.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%3E%3D20.0.0-brightgreen.svg)](https://nodejs.org)
 
@@ -267,10 +267,14 @@ chore: update dependencies
 
 | Role | Name |
 |------|------|
-| **Founder** | [Your Name] |
-| **Backend** | TBD |
-| **Frontend** | TBD |
-| **Design** | TBD |
+| **Founder** | [Trương Nguyễn Hoàng] |
+| **Backend** | [Lê Đức Trung Thi] |
+| **Frontend** | [Nguyễn Phương Mỹ Thuận] |
+| **Design** | [Nguyễn Thị Diễm Quyên], |
+| **Design** | [Bùi Quang Dũng] |
+| **Marketing** | [Nguyễn Trần Quốc Huy] |
+
+
 
 ---
 
