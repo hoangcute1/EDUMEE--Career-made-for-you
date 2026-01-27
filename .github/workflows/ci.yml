@@ -26,9 +26,9 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
-
-      - name: Install root dependencies
-        run: npm ci
+          cache-dependency-path: |
+            be/package-lock.json
+            fe/package-lock.json
 
       - name: Install backend dependencies
         working-directory: ./be
@@ -69,6 +69,7 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
+          cache-dependency-path: be/package-lock.json
 
       - name: Install dependencies
         working-directory: ./be
@@ -106,6 +107,7 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
+          cache-dependency-path: be/package-lock.json
 
       - name: Install dependencies
         working-directory: ./be
@@ -139,6 +141,7 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
+          cache-dependency-path: fe/package-lock.json
 
       - name: Install dependencies
         working-directory: ./fe
