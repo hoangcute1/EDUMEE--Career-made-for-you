@@ -22,6 +22,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.1.5",
+    "lightningcss": "^1.27.0",
     "prettier": "^3.4.2",
     "prettier-plugin-tailwindcss": "^0.6.0",
     "tailwindcss": "^4",
