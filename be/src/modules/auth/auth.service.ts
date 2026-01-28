@@ -1,7 +1,7 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { User } from '../users/schemas/user.schema';
+import { User, UserDocument } from '../users/schemas/user.schema';
 import { UsersService } from '../users/users.service';
 import { LoginDto, RegisterDto } from './dto';
 
@@ -62,7 +62,9 @@ export class AuthService {
     lastName?: string;
     avatar?: string;
   }): Promise<AuthResponse> {
-    let user = await this.usersService.findByGoogleId(profile.googleId);
+    let user: UserDocument | null = await this.usersService.findByGoogleId(
+      profile.googleId,
+    );
 
     if (!user) {
       user = await this.usersService.findByEmail(profile.email);
@@ -81,6 +83,10 @@ export class AuthService {
           lastName: profile.lastName,
         });
       }
+    }
+
+    if (!user) {
+      throw new UnauthorizedException('Failed to authenticate with Google');
     }
 
     await this.usersService.updateLastLogin(user._id.toString());

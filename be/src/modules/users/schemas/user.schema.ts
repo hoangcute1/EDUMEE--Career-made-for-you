@@ -8,11 +8,16 @@ export type UserDocument = User & Document;
   timestamps: true,
   toJSON: {
     virtuals: true,
-    transform: (doc, ret) => {
+    transform: (doc, ret: any) => {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
       ret.id = ret._id;
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       delete ret._id;
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       delete ret.__v;
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       delete ret.password;
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
       return ret;
     },
   },
