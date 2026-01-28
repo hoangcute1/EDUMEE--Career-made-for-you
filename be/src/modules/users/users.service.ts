@@ -13,7 +13,7 @@ import { User, UserDocument } from './schemas/user.schema';
 export class UsersService {
   constructor(@InjectModel(User.name) private userModel: Model<UserDocument>) {}
 
-  async create(createUserDto: CreateUserDto): Promise<User> {
+  async create(createUserDto: CreateUserDto): Promise<UserDocument> {
     const existingUser = await this.findByEmail(createUserDto.email);
     if (existingUser) {
       throw new ConflictException('Email already exists');
@@ -31,7 +31,7 @@ export class UsersService {
   async findAll(
     page = 1,
     limit = 10,
-  ): Promise<{ users: User[]; total: number }> {
+  ): Promise<{ users: UserDocument[]; total: number }> {
     const skip = (page - 1) * limit;
     const [users, total] = await Promise.all([
       this.userModel.find().skip(skip).limit(limit).exec(),
@@ -41,7 +41,7 @@ export class UsersService {
     return { users, total };
   }
 
-  async findById(id: string): Promise<User> {
+  async findById(id: string): Promise<UserDocument> {
     const user = await this.userModel.findById(id).exec();
     if (!user) {
       throw new NotFoundException('User not found');
@@ -57,7 +57,10 @@ export class UsersService {
     return this.userModel.findOne({ googleId }).exec();
   }
 
-  async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {
+  async update(
+    id: string,
+    updateUserDto: UpdateUserDto,
+  ): Promise<UserDocument> {
     const user = await this.userModel
       .findByIdAndUpdate(id, updateUserDto, { new: true })
       .exec();
