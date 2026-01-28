@@ -23,7 +23,7 @@
     "docker:down": "docker-compose down",
     "docker:logs": "docker-compose logs -f",
     "docker:prod": "docker-compose --profile production up -d",
-    "prepare": "husky"
+    "prepare": "node -e \"try { require.resolve('husky') } catch (e) { process.exit(0) }\" && husky || echo 'Husky not installed yet'"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.0.0",
