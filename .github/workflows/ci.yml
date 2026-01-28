@@ -27,15 +27,11 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
           cache-dependency-path: |
+            package-lock.json
             be/package-lock.json
             fe/package-lock.json
 
-      - name: Install backend dependencies
-        working-directory: ./be
-        run: npm ci
-
-      - name: Install frontend dependencies
-        working-directory: ./fe
+      - name: Install all dependencies
         run: npm ci
 
       - name: Lint Backend
@@ -69,10 +65,9 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
-          cache-dependency-path: be/package-lock.json
+          cache-dependency-path: package-lock.json
 
       - name: Install dependencies
-        working-directory: ./be
         run: npm ci
 
       - name: Run tests
@@ -107,10 +102,9 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
-          cache-dependency-path: be/package-lock.json
+          cache-dependency-path: package-lock.json
 
       - name: Install dependencies
-        working-directory: ./be
         run: npm ci
 
       - name: Build
@@ -141,10 +135,9 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
-          cache-dependency-path: fe/package-lock.json
+          cache-dependency-path: package-lock.json
 
       - name: Install dependencies
-        working-directory: ./fe
         run: npm ci
 
       - name: Build
