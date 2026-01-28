@@ -34,15 +34,13 @@
   },
   "lint-staged": {
     "be/**/*.ts": [
-      "eslint --fix",
-      "prettier --write"
+      "npm run lint:be"
     ],
     "fe/**/*.{ts,tsx}": [
-      "eslint --fix",
-      "prettier --write"
+      "npm run lint:fe"
     ],
     "*.{json,md,yml,yaml}": [
-      "prettier --write"
+      "npx prettier --write"
     ]
   },
   "engines": {

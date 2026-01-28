@@ -29,7 +29,7 @@ import { AppService } from './app.service';
     // MongoDB
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: async (configService: ConfigService) => ({
+      useFactory: (configService: ConfigService) => ({
         uri: configService.get<string>('database.uri'),
         autoIndex: true,
       }),

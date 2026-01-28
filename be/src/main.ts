@@ -87,4 +87,4 @@ async function bootstrap() {
   logger.log(`📡 CORS enabled for: ${corsOrigin}`);
 }
 
-bootstrap();
+void bootstrap();
