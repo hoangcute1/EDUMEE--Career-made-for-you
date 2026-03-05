@@ -37,7 +37,7 @@ import type { IUser } from './schemas/user.schema';
 import { EducationLevel, UserProfileDocument, Gender, BudgetLevel } from './schemas/user-profile.schema';
 
 @ApiTags('User Profiles')
-@ApiBearerAuth()
+@ApiBearerAuth('JWT-auth')
 @UseGuards(JwtAuthGuard)
 @Controller('profiles')
 export class UserProfileController {

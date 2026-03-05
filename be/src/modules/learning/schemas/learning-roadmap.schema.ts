@@ -55,7 +55,7 @@ export class LearningRoadmap {
   status!: RoadmapStatus;
 
   // Roadmap structure with phases and milestones
-  @Prop({ required: true })
+  @Prop({ required: true, type: [Object] })
   phases!: {
     phaseId: string;
     phase: LearningPhase;

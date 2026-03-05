@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Types, Schema as MongooseSchema } from 'mongoose';
+import { Document, Types } from 'mongoose';
 
 export type AssessmentAnswerDocument = AssessmentAnswer & Document;
 
@@ -19,44 +19,27 @@ export type AssessmentAnswerDocument = AssessmentAnswer & Document;
 export class AssessmentAnswer {
   _id!: Types.ObjectId;
 
-  @Prop({ required: true, type: Types.ObjectId, ref: 'AssessmentSession' })
-  sessionId!: Types.ObjectId;
-
   @Prop({ required: true, type: Types.ObjectId, ref: 'AssessmentQuestion' })
   questionId!: Types.ObjectId;
 
   @Prop({ required: true, type: Types.ObjectId, ref: 'User' })
   userId!: Types.ObjectId;
 
-  // Raw answer data
-  @Prop({ required: true, type: MongooseSchema.Types.Mixed })
-  answer!: any; // Can be string, number, array, object depending on question type
+  // Câu trả lời ABCD
+  @Prop({ required: true, enum: ['A', 'B', 'C', 'D'] })
+  answer!: string;
 
-  // Calculated scores
+  // Thời gian trả lời (milliseconds)
   @Prop({ type: Number })
-  rawScore?: number;
-
-  @Prop({ type: Number })
-  normalizedScore?: number; // 0-1 or 0-100 scale
-
-  // Response metadata
-  @Prop({ type: Number })
-  responseTime?: number; // Time taken to answer in seconds
+  responseTime?: number;
 
   @Prop({ type: Date, default: Date.now })
   answeredAt?: Date;
 
-  @Prop({ trim: true })
-  userAgent?: string;
-
-  @Prop({ type: Object })
-  dimensionScores?: Record<string, number>; // Scores for different assessment dimensions
-
+  // Metadata tùy chọn
   @Prop({ type: Object })
   metadata?: {
     skipped?: boolean;
-    revisited?: boolean;
-    confidence?: number; // User's confidence in their answer
     notes?: string;
   };
 
@@ -66,7 +49,7 @@ export class AssessmentAnswer {
 
 export const AssessmentAnswerSchema = SchemaFactory.createForClass(AssessmentAnswer);
 
-// Indexes
-AssessmentAnswerSchema.index({ sessionId: 1 });
-AssessmentAnswerSchema.index({ userId: 1, questionId: 1 });
+// Indexes for performance
+AssessmentAnswerSchema.index({ userId: 1, questionId: 1 }, { unique: true }); // User chỉ có thể trả lời 1 lần cho mỗi câu hỏi
 AssessmentAnswerSchema.index({ answeredAt: -1 });
+AssessmentAnswerSchema.index({ questionId: 1 });

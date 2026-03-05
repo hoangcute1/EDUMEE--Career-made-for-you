@@ -1,44 +1,37 @@
-import { IsNotEmpty, IsString, IsOptional, IsEnum, IsNumber } from 'class-validator';
+import { IsNotEmpty, IsString, IsOptional, IsEnum, IsNumber, IsArray, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
 import { QuestionType, AssessmentDimension } from '../schemas/assessment-question.schema';
 
-export class CreateAssessmentQuestionDto {
+class QuestionOptionDto {
   @IsNotEmpty()
   @IsString()
-  sessionId!: string;
+  value!: 'A' | 'B' | 'C' | 'D';
 
   @IsNotEmpty()
-  @IsEnum(QuestionType)
-  type!: QuestionType;
+  @IsString()
+  label!: string;
+}
 
+export class CreateAssessmentQuestionDto {
   @IsNotEmpty()
   @IsString()
   questionText!: string;
 
   @IsOptional()
-  @IsString()
-  category?: string;
+  @IsEnum(QuestionType)
+  questionType?: QuestionType; // Mặc định là MULTIPLE_CHOICE
 
-  @IsOptional()
+  @IsNotEmpty()
   @IsEnum(AssessmentDimension)
-  dimension?: AssessmentDimension;
+  dimension!: AssessmentDimension;
+
+  @IsNotEmpty()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => QuestionOptionDto)
+  options!: QuestionOptionDto[]; // Phải có đúng 4 đáp án A, B, C, D
 
   @IsOptional()
   @IsNumber()
-  order?: number;
-
-  @IsOptional()
-  @IsNumber()
-  weight?: number;
-
-  @IsOptional()
-  questionConfig?: any;
-
-  @IsOptional()
-  answerOptions?: any;
-
-  @IsOptional()
-  validationRules?: any;
-
-  @IsOptional()
-  scoringLogic?: any;
+  orderIndex?: number;
 }

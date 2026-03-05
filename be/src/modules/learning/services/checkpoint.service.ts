@@ -400,6 +400,39 @@ export class CheckpointService {
     }
   }
 
+  async findByWeekPlan(weekPlanId: string): Promise<Checkpoint[]> {
+    if (!Types.ObjectId.isValid(weekPlanId)) {
+      throw new BadRequestException('Invalid week plan ID');
+    }
+
+    return this.checkpointModel
+      .find({ weeklyPlanId: new Types.ObjectId(weekPlanId) })
+      .sort({ scheduledDate: 1 })
+      .exec();
+  }
+
+  async addEvaluation(id: string, evaluation: any): Promise<Checkpoint> {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException('Invalid checkpoint ID');
+    }
+
+    const checkpoint = await this.checkpointModel
+      .findByIdAndUpdate(
+        id,
+        {
+          progressEvaluation: evaluation,
+        },
+        { new: true, runValidators: true }
+      )
+      .exec();
+
+    if (!checkpoint) {
+      throw new NotFoundException('Checkpoint not found');
+    }
+
+    return checkpoint;
+  }
+
   private buildQuery(filters: Partial<Checkpoint>): CheckpointQuery {
     const query: CheckpointQuery = {};
 

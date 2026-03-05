@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { UserProfile, UserProfileDocument, EducationLevel, BudgetLevel, Gender } from './schemas/user-profile.schema';
 import { CreateUserProfileDto, UpdateUserProfileDto } from './dto/user-profile.dto';
 
@@ -11,15 +11,18 @@ export class UserProfileService {
   ) {}
 
   async create(userId: string, createUserProfileDto: CreateUserProfileDto): Promise<UserProfileDocument> {
+    // Convert userId string to ObjectId
+    const userObjectId = new Types.ObjectId(userId);
+    
     // Check if profile already exists for this user
-    const existingProfile = await this.userProfileModel.findOne({ userId });
+    const existingProfile = await this.userProfileModel.findOne({ userId: userObjectId });
     if (existingProfile) {
       throw new ConflictException('User profile already exists');
     }
 
     const userProfile = new this.userProfileModel({
       ...createUserProfileDto,
-      userId,
+      userId: userObjectId,
     });
 
     return userProfile.save();
@@ -100,8 +103,9 @@ export class UserProfileService {
   }
 
   async findByUserId(userId: string): Promise<UserProfileDocument | null> {
+    const userObjectId = new Types.ObjectId(userId);
     return this.userProfileModel
-      .findOne({ userId })
+      .findOne({ userId: userObjectId })
       .populate('userId', 'firstName lastName email')
       .exec();
   }
@@ -120,9 +124,10 @@ export class UserProfileService {
   }
 
   async update(userId: string, updateUserProfileDto: UpdateUserProfileDto): Promise<UserProfileDocument> {
+    const userObjectId = new Types.ObjectId(userId);
     const profile = await this.userProfileModel
       .findOneAndUpdate(
-        { userId },
+        { userId: userObjectId },
         updateUserProfileDto,
         { new: true }
       )
@@ -137,7 +142,8 @@ export class UserProfileService {
   }
 
   async delete(userId: string): Promise<void> {
-    const result = await this.userProfileModel.findOneAndDelete({ userId }).exec();
+    const userObjectId = new Types.ObjectId(userId);
+    const result = await this.userProfileModel.findOneAndDelete({ userId: userObjectId }).exec();
     if (!result) {
       throw new NotFoundException('Profile not found');
     }
@@ -184,9 +190,10 @@ export class UserProfileService {
   }
 
   async updateConstraints(userId: string, constraints: Record<string, any>): Promise<UserProfileDocument> {
+    const userObjectId = new Types.ObjectId(userId);
     const profile = await this.userProfileModel
       .findOneAndUpdate(
-        { userId },
+        { userId: userObjectId },
         { constraintsJson: constraints },
         { new: true }
       )

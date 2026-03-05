@@ -11,7 +11,6 @@ import {
   HttpStatus,
   UseGuards,
 } from '@nestjs/common';
-import { Types } from 'mongoose';
 import {
   ApiTags,
   ApiOperation,
@@ -26,7 +25,7 @@ import { QuestionType } from '../schemas/assessment-question.schema';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 
 @ApiTags('Assessment Questions')
-@ApiBearerAuth()
+@ApiBearerAuth('JWT-auth')
 @UseGuards(JwtAuthGuard)
 @Controller('assessment-questions')
 export class AssessmentQuestionController {
@@ -42,25 +41,22 @@ export class AssessmentQuestionController {
     return this.assessmentQuestionService.create(createDto);
   }
 
-  @Post('bulk/:sessionId')
-  @ApiOperation({ summary: 'Create multiple assessment questions for a session' })
-  @ApiParam({ name: 'sessionId', description: 'Assessment session ID' })
+  @Post('bulk')
+  @ApiOperation({ summary: 'Bulk create assessment questions' })
   @ApiResponse({ 
     status: 201, 
     description: 'Assessment questions created successfully' 
   })
   async bulkCreate(
-    @Param('sessionId') sessionId: string,
     @Body() questions: CreateAssessmentQuestionDto[],
   ) {
-    return this.assessmentQuestionService.bulkCreate(sessionId, questions);
+    return this.assessmentQuestionService.bulkCreate(questions);
   }
 
   @Get()
   @ApiOperation({ summary: 'Get all assessment questions with pagination' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
-  @ApiQuery({ name: 'sessionId', required: false, type: String })
   @ApiQuery({ name: 'type', required: false, enum: QuestionType })
   @ApiResponse({ 
     status: 200, 
@@ -69,12 +65,10 @@ export class AssessmentQuestionController {
   async findAll(
     @Query('page') page?: number,
     @Query('limit') limit?: number,
-    @Query('sessionId') sessionId?: string,
     @Query('type') type?: QuestionType,
   ) {
     const filters: Partial<any> = {};
-    if (sessionId) filters.sessionId = new Types.ObjectId(sessionId);
-    if (type) filters.type = type;
+    if (type) filters.questionType = type;
 
     return this.assessmentQuestionService.findAll(
       page ? Number(page) : 1,
@@ -83,30 +77,17 @@ export class AssessmentQuestionController {
     );
   }
 
-  @Get('session/:sessionId')
-  @ApiOperation({ summary: 'Get all questions for a specific session' })
-  @ApiParam({ name: 'sessionId', description: 'Assessment session ID' })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Session questions retrieved successfully' 
-  })
-  async findBySession(@Param('sessionId') sessionId: string) {
-    return this.assessmentQuestionService.findBySession(sessionId);
-  }
-
   @Get('type/:type')
   @ApiOperation({ summary: 'Get questions by type' })
   @ApiParam({ name: 'type', enum: QuestionType })
-  @ApiQuery({ name: 'sessionId', required: false, type: String })
   @ApiResponse({ 
     status: 200, 
     description: 'Questions by type retrieved successfully' 
   })
   async findByType(
     @Param('type') type: QuestionType,
-    @Query('sessionId') sessionId?: string,
   ) {
-    return this.assessmentQuestionService.findByType(type, sessionId);
+    return this.assessmentQuestionService.findByType(type);
   }
 
   @Get(':id')
@@ -121,7 +102,7 @@ export class AssessmentQuestionController {
     description: 'Assessment question not found' 
   })
   async findOne(@Param('id') id: string) {
-    return this.assessmentQuestionService.findOne(id);
+    return this.assessmentQuestionService.findById(id);
   }
 
   @Patch(':id')
@@ -142,20 +123,6 @@ export class AssessmentQuestionController {
     return this.assessmentQuestionService.update(id, updateDto);
   }
 
-  @Patch('reorder/:sessionId')
-  @ApiOperation({ summary: 'Reorder questions within a session' })
-  @ApiParam({ name: 'sessionId', description: 'Assessment session ID' })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Questions reordered successfully' 
-  })
-  async reorderQuestions(
-    @Param('sessionId') sessionId: string,
-    @Body('questionIds') questionIds: string[],
-  ) {
-    return this.assessmentQuestionService.reorderQuestions(sessionId, questionIds);
-  }
-
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete an assessment question' })
@@ -169,6 +136,6 @@ export class AssessmentQuestionController {
     description: 'Assessment question not found' 
   })
   async remove(@Param('id') id: string) {
-    return this.assessmentQuestionService.remove(id);
+    return this.assessmentQuestionService.delete(id);
   }
 }

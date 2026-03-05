@@ -68,7 +68,7 @@ export class UsersController {
 
   @Put('change-password')
   @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Change current user password' })
   @ApiResponse({ status: 200, description: 'Password changed successfully' })
   @ApiResponse({ status: 401, description: 'Invalid current password' })
@@ -96,7 +96,7 @@ export class UsersController {
   @Put('reset-password')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
-  @ApiBearerAuth()
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ 
     summary: 'Reset user password (Admin only)',
     description: 'Allows admin to reset any user password'

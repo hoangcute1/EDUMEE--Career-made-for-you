@@ -3,8 +3,6 @@ import { MongooseModule } from '@nestjs/mongoose';
 
 // Schemas
 import {
-  AssessmentSession,
-  AssessmentSessionSchema,
   AssessmentQuestion,
   AssessmentQuestionSchema,
   AssessmentAnswer,
@@ -15,15 +13,14 @@ import {
 
 // Services
 import {
-  AssessmentSessionService,
   AssessmentQuestionService,
   AssessmentAnswerService,
   CareerFitResultService,
 } from './services';
+import { AIService } from '../../common/services/ai.service';
 
 // Controllers
 import {
-  AssessmentSessionController,
   AssessmentQuestionController,
   AssessmentAnswerController,
   CareerFitResultController,
@@ -32,26 +29,23 @@ import {
 @Module({
   imports: [
     MongooseModule.forFeature([
-      { name: AssessmentSession.name, schema: AssessmentSessionSchema },
       { name: AssessmentQuestion.name, schema: AssessmentQuestionSchema },
       { name: AssessmentAnswer.name, schema: AssessmentAnswerSchema },
       { name: CareerFitResult.name, schema: CareerFitResultSchema },
     ]),
   ],
   controllers: [
-    AssessmentSessionController,
     AssessmentQuestionController,
     AssessmentAnswerController,
     CareerFitResultController,
   ],
   providers: [
-    AssessmentSessionService,
     AssessmentQuestionService,
     AssessmentAnswerService,
     CareerFitResultService,
+    AIService,
   ],
   exports: [
-    AssessmentSessionService,
     AssessmentQuestionService,
     AssessmentAnswerService,
     CareerFitResultService,

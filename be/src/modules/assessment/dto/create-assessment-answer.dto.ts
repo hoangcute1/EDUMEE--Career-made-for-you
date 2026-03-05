@@ -1,10 +1,6 @@
-import { IsNotEmpty, IsString, IsOptional, IsNumber } from 'class-validator';
+import { IsNotEmpty, IsString, IsOptional, IsNumber, IsIn } from 'class-validator';
 
 export class CreateAssessmentAnswerDto {
-  @IsNotEmpty()
-  @IsString()
-  sessionId!: string;
-
   @IsNotEmpty()
   @IsString()
   questionId!: string;
@@ -14,26 +10,14 @@ export class CreateAssessmentAnswerDto {
   userId!: string;
 
   @IsNotEmpty()
-  answer!: any; // Can be string, number, array, object depending on question type
+  @IsString()
+  @IsIn(['A', 'B', 'C', 'D'])
+  answer!: string; // Trắc nghiệm ABCD
 
   @IsOptional()
   @IsNumber()
-  rawScore?: number;
+  responseTime?: number; // Thời gian trả lời (milliseconds)
 
   @IsOptional()
-  @IsNumber()
-  normalizedScore?: number;
-
-  @IsOptional()
-  dimensionScores?: any;
-
-  @IsOptional()
-  confidenceLevel?: number;
-
-  @IsOptional()
-  @IsNumber()
-  responseTime?: number;
-
-  @IsOptional()
-  metadata?: any;
+  metadata?: any; // Thông tin bổ sung nếu cần
 }

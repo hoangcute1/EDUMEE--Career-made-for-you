@@ -35,22 +35,22 @@ export interface IUser extends Document {
 export class User {
   _id?: Types.ObjectId;
 
-  @Prop({ required: true, unique: true, lowercase: true, trim: true })
+  @Prop({ required: true, unique: true, lowercase: true, trim: true, type: String })
   email?: string;
 
-  @Prop({ required: true })
+  @Prop({ required: true, type: String })
   password?: string;
 
-  @Prop({ trim: true })
+  @Prop({ trim: true, type: String })
   firstName?: string;
 
-  @Prop({ trim: true })
+  @Prop({ trim: true, type: String })
   lastName?: string;
 
-  @Prop()
+  @Prop({ type: String })
   avatar?: string;
 
-  @Prop()
+  @Prop({ type: String })
   phone?: string;
 
   // User role enum

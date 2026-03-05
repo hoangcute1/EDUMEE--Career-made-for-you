@@ -102,17 +102,19 @@ export class AuthService {
     return this.generateAuthResponse(user);
   }
 
-  async refreshToken(refreshToken: string): Promise<{ accessToken: string }> {
+  async refreshToken(refreshToken: string): Promise<AuthResponse> {
     try {
       const payload = this.jwtService.verify<JwtPayload>(refreshToken, {
         secret: this.configService.get('jwt.refreshSecret'),
       });
 
       const user = await this.usersService.findById(payload.sub);
+      
+      if (!user || !user.isActive) {
+        throw new UnauthorizedException('Invalid refresh token');
+      }
 
-      const newAccessToken = this.generateAccessToken(user);
-
-      return { accessToken: newAccessToken };
+      return this.generateAuthResponse(user);
     } catch {
       throw new UnauthorizedException('Invalid refresh token');
     }
@@ -160,5 +162,24 @@ export class AuthService {
       secret: this.configService.get('jwt.refreshSecret'),
       expiresIn: this.configService.get('jwt.refreshExpiresIn'),
     });
+  }
+
+  getDebugInfo() {
+    return {
+      jwtConfig: {
+        secret: this.configService.get('jwt.secret') ? 'SET' : 'NOT SET',
+        expiresIn: this.configService.get<string>('jwt.expiresIn'),
+        refreshSecret: this.configService.get('jwt.refreshSecret') ? 'SET' : 'NOT SET',
+        refreshExpiresIn: this.configService.get<string>('jwt.refreshExpiresIn'),
+      },
+      environment: this.configService.get<string>('NODE_ENV') || 'development',
+      database: this.configService.get('DATABASE_URI') ? 'CONFIGURED' : 'NOT CONFIGURED',
+      timestamp: new Date().toISOString(),
+      tokenFormat: 'Bearer <your-access-token>',
+      example: {
+        loginFirst: 'POST /api/v1/auth/login',
+        thenUseToken: 'Authorization: Bearer <access-token-from-login-response>',
+      }
+    };
   }
 }

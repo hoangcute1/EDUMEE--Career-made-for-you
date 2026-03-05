@@ -99,7 +99,7 @@ export class Career {
   };
 
   // Career progression levels
-  @Prop({ required: true })
+  @Prop({ required: true, type: [Object] })
   careerLevels!: {
     level: ExperienceLevel;
     title: string;

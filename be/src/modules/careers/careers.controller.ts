@@ -34,7 +34,7 @@ import { JwtAuthGuard } from '../auth/guards';
 @ApiTags('Careers')
 @Controller('careers')
 @UseGuards(JwtAuthGuard)
-@ApiBearerAuth()
+@ApiBearerAuth('JWT-auth')
 export class CareerController {
   constructor(private readonly careerService: CareerService) {}
 

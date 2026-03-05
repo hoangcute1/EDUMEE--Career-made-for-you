@@ -25,208 +25,118 @@ import { CreateCareerFitResultDto, UpdateCareerFitResultDto } from '../dto';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 
+interface CurrentUserPayload {
+  userId: string;
+  email: string;
+  role: string;
+}
+
+interface Career {
+  id: string;
+  title: string;
+}
+
+interface GenerateAnalysisRequest {
+  availableCareers?: Career[];
+}
+
+
 @ApiTags('Career Fit Results')
-@ApiBearerAuth()
+@ApiBearerAuth('JWT-auth')
 @UseGuards(JwtAuthGuard)
 @Controller('career-fit-results')
 export class CareerFitResultController {
   constructor(private readonly careerFitResultService: CareerFitResultService) {}
 
-  @Post()
-  @ApiOperation({ summary: 'Create a new career fit result' })
+  @Post('generate-my-analysis')
+  @ApiOperation({ summary: 'Generate AI-powered career analysis from current user answers (auto-fetch from DB)' })
   @ApiResponse({ 
     status: 201, 
-    description: 'Career fit result created successfully' 
+    description: 'AI analysis completed and career fit results generated' 
   })
+  async generateMyAnalysis(
+    @CurrentUser() user: CurrentUserPayload,
+    @Body() requestData?: GenerateAnalysisRequest,
+  ) {
+    console.log('Generate My Analysis - User:', user?.userId);
+    
+    return this.careerFitResultService.generateAnalysisFromUserAnswers(
+      user.userId,
+      requestData?.availableCareers || []
+    );
+  }
+
+  @Get('career-insight')
+  @ApiOperation({ summary: 'Get AI-generated career insight' })
+  @ApiQuery({ name: 'careerTitle', required: true, type: String })
+  @ApiQuery({ name: 'traits', required: true, type: String, description: 'Comma-separated personality traits' })
+  async getCareerInsight(
+    @Query('careerTitle') careerTitle: string,
+    @Query('traits') traits: string,
+  ) {
+    const personalityTraits = traits.split(',').map(trait => trait.trim());
+    const insight = await this.careerFitResultService.getCareerInsight(careerTitle, personalityTraits);
+    return { careerTitle, personalityTraits, insight };
+  }
+
+  @Post()
+  @ApiOperation({ summary: 'Create a new career fit result' })
+  @ApiResponse({ status: 201, description: 'Career fit result created successfully' })
   async create(@Body() createDto: CreateCareerFitResultDto) {
     return this.careerFitResultService.create(createDto);
   }
 
   @Get()
-  @ApiOperation({ summary: 'Get all career fit results with pagination' })
+  @ApiOperation({ summary: 'Get all career fit results' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
-  @ApiQuery({ name: 'sessionId', required: false, type: String })
   @ApiQuery({ name: 'userId', required: false, type: String })
-  @ApiQuery({ name: 'careerId', required: false, type: String })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Career fit results retrieved successfully' 
-  })
   async findAll(
     @Query('page') page?: number,
     @Query('limit') limit?: number,
-    @Query('sessionId') sessionId?: string,
     @Query('userId') userId?: string,
-    @Query('careerId') careerId?: string,
   ) {
-    const filters: { sessionId?: Types.ObjectId; userId?: Types.ObjectId; careerId?: Types.ObjectId } = {};
-    if (sessionId) filters.sessionId = new Types.ObjectId(sessionId);
+    const filters: Partial<any> = {};
     if (userId) filters.userId = new Types.ObjectId(userId);
-    if (careerId) filters.careerId = new Types.ObjectId(careerId);
-
-    return this.careerFitResultService.findAll(
-      page ? Number(page) : 1,
-      limit ? Number(limit) : 10,
-      filters,
-    );
-  }
-
-  @Get('statistics')
-  @ApiOperation({ summary: 'Get career fit results statistics' })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Statistics retrieved successfully' 
-  })
-  async getStatistics(): Promise<any> {
-    return this.careerFitResultService.getStatistics();
-  }
-
-  @Get('session/:sessionId')
-  @ApiOperation({ summary: 'Get career fit results for a specific session' })
-  @ApiParam({ name: 'sessionId', description: 'Assessment session ID' })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Session career fit results retrieved successfully' 
-  })
-  async findBySession(@Param('sessionId') sessionId: string) {
-    return this.careerFitResultService.findBySession(sessionId);
-  }
-
-  @Get('user/:userId/top-matches')
-  @ApiOperation({ summary: 'Get top career matches for a user' })
-  @ApiParam({ name: 'userId', description: 'User ID' })
-  @ApiQuery({ name: 'limit', required: false, type: Number })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Top career matches retrieved successfully' 
-  })
-  async getTopMatches(
-    @Param('userId') userId: string,
-    @Query('limit') limit?: number,
-  ) {
-    return this.careerFitResultService.getTopCareerMatches(
-      userId,
-      limit ? Number(limit) : 10,
-    );
-  }
-
-  @Get('my-top-matches')
-  @ApiOperation({ summary: 'Get top career matches for current user' })
-  @ApiQuery({ name: 'limit', required: false, type: Number })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Top career matches retrieved successfully' 
-  })
-  async getMyTopMatches(
-    @CurrentUser() user: { id: string },
-    @Query('limit') limit?: number,
-  ) {
-    return this.careerFitResultService.getTopCareerMatches(
-      user.id,
-      limit ? Number(limit) : 10,
-    );
-  }
-
-  @Get('user/:userId')
-  @ApiOperation({ summary: 'Get career fit results for a specific user' })
-  @ApiParam({ name: 'userId', description: 'User ID' })
-  @ApiQuery({ name: 'limit', required: false, type: Number })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'User career fit results retrieved successfully' 
-  })
-  async findByUser(
-    @Param('userId') userId: string,
-    @Query('limit') limit?: number,
-  ) {
-    return this.careerFitResultService.findByUser(
-      userId,
-      limit ? Number(limit) : undefined,
-    );
+    return this.careerFitResultService.findAll(page || 1, limit || 10, filters);
   }
 
   @Get('my-results')
-  @ApiOperation({ summary: 'Get career fit results for current user' })
+  @ApiOperation({ summary: 'Get current user career fit results' })
   @ApiQuery({ name: 'limit', required: false, type: Number })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'User career fit results retrieved successfully' 
-  })
   async findMyResults(
-    @CurrentUser() user: { id: string },
+    @CurrentUser() user: CurrentUserPayload,
     @Query('limit') limit?: number,
   ) {
-    return this.careerFitResultService.findByUser(
-      user.id,
-      limit ? Number(limit) : undefined,
-    );
+    return this.careerFitResultService.findByUser(user.userId, limit);
   }
 
-  @Get('career/:careerId')
-  @ApiOperation({ summary: 'Get career fit results for a specific career' })
-  @ApiParam({ name: 'careerId', description: 'Career ID' })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Career fit results retrieved successfully' 
-  })
-  async findByCareer(@Param('careerId') careerId: string) {
-    return this.careerFitResultService.findByCareer(careerId);
+  @Get('top-matches')
+  @ApiOperation({ summary: 'Get top career matches for current user' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Number of top matches to return (default: 10)' })
+  async getTopMatches(
+    @CurrentUser() user: CurrentUserPayload,
+    @Query('limit') limit?: number,
+  ) {
+    return this.careerFitResultService.getTopCareerMatches(user.userId, limit || 10);
   }
 
-  @Post('compare/:userId')
-  @ApiOperation({ summary: 'Generate career comparison report for a user' })
-  @ApiParam({ name: 'userId', description: 'User ID' })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Career comparison report generated successfully' 
-  })
-  async generateComparisonReport(
-    @Param('userId') userId: string,
-    @Body('careerIds') careerIds: string[],
-  ): Promise<any> {
-    return this.careerFitResultService.generateComparisonReport(userId, careerIds);
-  }
-
-  @Post('my-compare')
-  @ApiOperation({ summary: 'Generate career comparison report for current user' })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Career comparison report generated successfully' 
-  })
-  async generateMyComparisonReport(
-    @CurrentUser() user: { id: string },
-    @Body('careerIds') careerIds: string[],
-  ): Promise<any> {
-    return this.careerFitResultService.generateComparisonReport(user.id, careerIds);
+  @Get('statistics')
+  @ApiOperation({ summary: 'Get career fit statistics' })
+  async getStatistics(): Promise<Record<string, unknown>> {
+    return this.careerFitResultService.getStatistics() as Promise<Record<string, unknown>>;
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Get a career fit result by ID' })
+  @ApiOperation({ summary: 'Get career fit result by ID' })
   @ApiParam({ name: 'id', description: 'Career fit result ID' })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Career fit result retrieved successfully' 
-  })
-  @ApiResponse({ 
-    status: 404, 
-    description: 'Career fit result not found' 
-  })
   async findOne(@Param('id') id: string) {
     return this.careerFitResultService.findOne(id);
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Update a career fit result' })
+  @ApiOperation({ summary: 'Update career fit result' })
   @ApiParam({ name: 'id', description: 'Career fit result ID' })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Career fit result updated successfully' 
-  })
-  @ApiResponse({ 
-    status: 404, 
-    description: 'Career fit result not found' 
-  })
   async update(
     @Param('id') id: string,
     @Body() updateDto: UpdateCareerFitResultDto,
@@ -236,17 +146,18 @@ export class CareerFitResultController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Delete a career fit result' })
+  @ApiOperation({ summary: 'Delete career fit result' })
   @ApiParam({ name: 'id', description: 'Career fit result ID' })
-  @ApiResponse({ 
-    status: 204, 
-    description: 'Career fit result deleted successfully' 
-  })
-  @ApiResponse({ 
-    status: 404, 
-    description: 'Career fit result not found' 
-  })
   async remove(@Param('id') id: string) {
     return this.careerFitResultService.remove(id);
+  }
+
+  @Post('comparison')
+  @ApiOperation({ summary: 'Generate comparison report for multiple careers' })
+  async generateComparison(
+    @CurrentUser() user: CurrentUserPayload,
+    @Body() body: { careerIds: string[] },
+  ): Promise<Record<string, unknown>> {
+    return (await this.careerFitResultService.generateComparisonReport(user.userId, body.careerIds)) as Record<string, unknown>;
   }
 }

@@ -48,7 +48,7 @@ export class TaskSubmission {
   status!: SubmissionStatus;
 
   // Submission content
-  @Prop({ required: true })
+  @Prop({ required: true, type: Object })
   submission!: {
     files?: {
       filename: string;

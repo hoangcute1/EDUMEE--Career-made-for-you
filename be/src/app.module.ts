@@ -13,6 +13,12 @@ import { appConfig, databaseConfig, jwtConfig, redisConfig } from './config';
 
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
+import { AssessmentModule } from './modules/assessment/assessment.module';
+import { CareersModule } from './modules/careers/careers.module';
+import { LearningModule } from './modules/learning/learning.module';
+import { CommunityModule } from './modules/community/community.module';
+import { MentoringModule } from './modules/mentoring/mentoring.module';
+import { OnboardingModule } from './modules/onboarding/onboarding.module';
 
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -51,6 +57,12 @@ import { AppService } from './app.service';
     // Feature Modules
     UsersModule,
     AuthModule,
+    AssessmentModule,
+    CareersModule,
+    LearningModule,
+    CommunityModule,
+    MentoringModule,
+    OnboardingModule,
   ],
   controllers: [AppController],
   providers: [
