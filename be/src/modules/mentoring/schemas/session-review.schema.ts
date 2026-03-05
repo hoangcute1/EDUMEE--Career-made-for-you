@@ -49,7 +49,7 @@ export class SessionReview {
   status!: ReviewStatus;
 
   // Overall ratings
-  @Prop({ required: true })
+  @Prop({ required: true, type: Object })
   overallRatings!: {
     overallSatisfaction: number; // 1-5 scale
     wouldRecommend: boolean;

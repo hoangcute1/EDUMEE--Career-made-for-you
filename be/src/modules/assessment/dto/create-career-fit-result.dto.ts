@@ -1,9 +1,10 @@
 import { IsNotEmpty, IsString, IsOptional, IsNumber } from 'class-validator';
 
 export class CreateCareerFitResultDto {
-  @IsNotEmpty()
-  @IsString()
-  sessionId!: string;
+  // sessionId removed - no longer using sessions
+  // @IsOptional()
+  // @IsString() 
+  // sessionId?: string;
 
   @IsNotEmpty()
   @IsString()

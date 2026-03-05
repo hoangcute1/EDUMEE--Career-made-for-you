@@ -45,7 +45,7 @@ export class TutorProfile {
   tutorLevel!: TutorLevel;
 
   // Professional background
-  @Prop({ required: true })
+  @Prop({ required: true, type: Object })
   professionalBackground!: {
     currentPosition: string;
     company: string;
@@ -78,7 +78,7 @@ export class TutorProfile {
   };
 
   // Mentoring expertise
-  @Prop({ required: true })
+  @Prop({ required: true, type: Object })
   mentoringExpertise!: {
     // Careers they can mentor for
     careerExpertise: {
@@ -106,7 +106,7 @@ export class TutorProfile {
   };
 
   // Availability and preferences
-  @Prop({ required: true })
+  @Prop({ required: true, type: Object })
   availability!: {
     timeZone: string;
     

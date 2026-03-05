@@ -56,7 +56,7 @@ export class BookingSession {
   status!: BookingStatus;
 
   // Session scheduling details
-  @Prop({ required: true })
+  @Prop({ required: true, type: Object })
   schedulingDetails!: {
     requestedDateTime: Date;
     confirmedDateTime?: Date;
@@ -82,7 +82,7 @@ export class BookingSession {
   };
 
   // Booking request details
-  @Prop({ required: true })
+  @Prop({ required: true, type: Object })
   bookingRequest!: {
     // What the mentee wants to discuss
     topicsToDiscuss: string[];

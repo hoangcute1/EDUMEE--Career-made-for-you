@@ -64,7 +64,7 @@ export class Checkpoint {
   status!: CheckpointStatus;
 
   // What to assess/review at this checkpoint
-  @Prop({ required: true })
+  @Prop({ required: true, type: [Object] })
   assessmentAreas!: {
     area: 'progress' | 'skills' | 'goals' | 'timeline' | 'satisfaction' | 'challenges';
     weight: number; // Importance of this area (1-5)

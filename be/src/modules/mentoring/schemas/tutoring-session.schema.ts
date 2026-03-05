@@ -40,7 +40,7 @@ export class TutoringSession {
     status!: SessionStatus;
 
     // Session execution details
-    @Prop({ required: true })
+    @Prop({ required: true, type: Object })
     sessionDetails!: {
         scheduledStartTime: Date;
         scheduledEndTime: Date;

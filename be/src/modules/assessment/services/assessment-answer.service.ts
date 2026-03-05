@@ -1,21 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { AssessmentAnswer, AssessmentAnswerDocument } from '../schemas/assessment-answer.schema';
 import { CreateAssessmentAnswerDto, UpdateAssessmentAnswerDto } from '../dto';
-
-interface SessionProgress {
-  totalAnswers: number;
-  averageScore: number;
-  dimensionBreakdown: Record<string, number>;
-  responseTimeStats: ResponseTimeStats;
-}
-
-interface ResponseTimeStats {
-  average: number;
-  min: number;
-  max: number;
-}
 
 @Injectable()
 export class AssessmentAnswerService {
@@ -25,13 +12,53 @@ export class AssessmentAnswerService {
   ) {}
 
   async create(createDto: CreateAssessmentAnswerDto): Promise<AssessmentAnswer> {
-    const answer = new this.assessmentAnswerModel({
-      ...createDto,
-      sessionId: new Types.ObjectId(createDto.sessionId),
-      questionId: new Types.ObjectId(createDto.questionId),
-      userId: new Types.ObjectId(createDto.userId),
-    });
-    return answer.save();
+    try {
+      const answer = new this.assessmentAnswerModel({
+        ...createDto,
+        questionId: new Types.ObjectId(createDto.questionId),
+        userId: new Types.ObjectId(createDto.userId),
+      });
+      return answer.save();
+    } catch (error) {
+      if (error instanceof Error && 'code' in error && (error as { code: number }).code === 11000) {
+        throw new ConflictException('User đã trả lời câu hỏi này rồi');
+      }
+      throw error;
+    }
+  }
+
+  // Trả lời câu hỏi (tạo mới hoặc cập nhật nếu đã trả lời)
+  async answerQuestion(createDto: CreateAssessmentAnswerDto): Promise<AssessmentAnswer> {
+    const existingAnswer = await this.assessmentAnswerModel
+      .findOne({
+        questionId: new Types.ObjectId(createDto.questionId),
+        userId: new Types.ObjectId(createDto.userId),
+      })
+      .exec();
+
+    if (existingAnswer) {
+      // Cập nhật câu trả lời cũ
+      return this.assessmentAnswerModel
+        .findByIdAndUpdate(
+          existingAnswer._id,
+          {
+            answer: createDto.answer,
+            responseTime: createDto.responseTime,
+            answeredAt: new Date(),
+            metadata: createDto.metadata,
+          },
+          { new: true, runValidators: true }
+        )
+        .exec() as Promise<AssessmentAnswer>;
+    } else {
+      // Tạo câu trả lời mới
+      const answer = new this.assessmentAnswerModel({
+        ...createDto,
+        questionId: new Types.ObjectId(createDto.questionId),
+        userId: new Types.ObjectId(createDto.userId),
+      });
+      return answer.save();
+    }
   }
 
   async findAll(
@@ -46,8 +73,7 @@ export class AssessmentAnswerService {
     const [data, total] = await Promise.all([
       this.assessmentAnswerModel
         .find(query)
-        .populate('sessionId', 'title type')
-        .populate('questionId', 'questionText type category')
+        .populate('questionId', 'questionText dimension orderIndex')
         .populate('userId', 'email firstName lastName')
         .sort({ createdAt: -1 })
         .skip(skip)
@@ -66,8 +92,7 @@ export class AssessmentAnswerService {
 
     const answer = await this.assessmentAnswerModel
       .findById(id)
-      .populate('sessionId', 'title type')
-      .populate('questionId', 'questionText type category')
+      .populate('questionId', 'questionText dimension')
       .populate('userId', 'email firstName lastName')
       .exec();
 
@@ -78,38 +103,19 @@ export class AssessmentAnswerService {
     return answer;
   }
 
-  async findBySession(sessionId: string): Promise<AssessmentAnswer[]> {
-    if (!Types.ObjectId.isValid(sessionId)) {
-      throw new BadRequestException('Invalid session ID');
-    }
 
-    return this.assessmentAnswerModel
-      .find({ sessionId: new Types.ObjectId(sessionId) })
-      .populate('questionId', 'questionText type order')
-      .populate('userId', 'email firstName lastName')
-      .sort({ createdAt: 1 })
-      .exec();
-  }
 
-  async findByUser(userId: string, sessionId?: string): Promise<AssessmentAnswer[]> {
+  async findByUser(userId: string): Promise<AssessmentAnswer[]> {
     if (!Types.ObjectId.isValid(userId)) {
       throw new BadRequestException('Invalid user ID');
     }
 
     const query: Record<string, any> = { userId: new Types.ObjectId(userId) };
-    
-    if (sessionId) {
-      if (!Types.ObjectId.isValid(sessionId)) {
-        throw new BadRequestException('Invalid session ID');
-      }
-      query.sessionId = new Types.ObjectId(sessionId);
-    }
 
     return this.assessmentAnswerModel
       .find(query)
-      .populate('sessionId', 'title type')
-      .populate('questionId', 'questionText type order')
-      .sort({ createdAt: -1 })
+      .populate('questionId', 'questionText dimension orderIndex')
+      .sort({ 'questionId.orderIndex': 1, createdAt: 1 })
       .exec();
   }
 
@@ -132,8 +138,7 @@ export class AssessmentAnswerService {
 
     const answer = await this.assessmentAnswerModel
       .findByIdAndUpdate(id, updateDto, { new: true, runValidators: true })
-      .populate('sessionId', 'title type')
-      .populate('questionId', 'questionText type')
+      .populate('questionId', 'questionText dimension')
       .populate('userId', 'email firstName lastName')
       .exec();
 
@@ -156,28 +161,11 @@ export class AssessmentAnswerService {
     }
   }
 
-  async calculateSessionProgress(sessionId: string): Promise<SessionProgress> {
-    if (!Types.ObjectId.isValid(sessionId)) {
-      throw new BadRequestException('Invalid session ID');
-    }
 
-    const answers = await this.assessmentAnswerModel
-      .find({ sessionId: new Types.ObjectId(sessionId) })
-      .populate('questionId', 'type category dimension')
-      .exec();
-
-    return {
-      totalAnswers: answers.length,
-      averageScore: this.calculateAverageScore(answers),
-      dimensionBreakdown: this.calculateDimensionScores(answers),
-      responseTimeStats: this.calculateResponseTimeStats(answers),
-    };
-  }
 
   async bulkCreate(answers: CreateAssessmentAnswerDto[]): Promise<AssessmentAnswer[]> {
     const answersWithObjectIds = answers.map(answer => ({
       ...answer,
-      sessionId: new Types.ObjectId(answer.sessionId),
       questionId: new Types.ObjectId(answer.questionId),
       userId: new Types.ObjectId(answer.userId),
     }));
@@ -185,77 +173,67 @@ export class AssessmentAnswerService {
     return this.assessmentAnswerModel.insertMany(answersWithObjectIds);
   }
 
-  private calculateAverageScore(answers: AssessmentAnswer[]): number {
-    const validScores = answers
-      .filter(answer => typeof answer.normalizedScore === 'number')
-      .map(answer => answer.normalizedScore!);
-    
-    return validScores.length > 0 
-      ? validScores.reduce((sum, score) => sum + score, 0) / validScores.length
-      : 0;
-  }
+  // Thống kê đơn giản cho user
+  async getUserAnswerStats(userId: string): Promise<{
+    totalAnswered: number;
+    answersByDimension: Record<string, number>;
+    responseTimeStats?: {
+      average: number;
+      min: number;
+      max: number;
+    };
+  }> {
+    if (!Types.ObjectId.isValid(userId)) {
+      throw new BadRequestException('Invalid user ID');
+    }
 
-  private calculateDimensionScores(answers: AssessmentAnswer[]): Record<string, number> {
-    const dimensionScores: { [key: string]: number[] } = {};
-    
+    const answers = await this.assessmentAnswerModel
+      .find({ userId: new Types.ObjectId(userId) })
+      .populate('questionId', 'dimension')
+      .exec();
+
+    const answersByDimension: Record<string, number> = {};
+    const responseTimes: number[] = [];
+
     answers.forEach(answer => {
-      if (answer.dimensionScores && typeof answer.dimensionScores === 'object') {
-        Object.entries(answer.dimensionScores).forEach(([dimension, score]) => {
-          if (!dimensionScores[dimension]) {
-            dimensionScores[dimension] = [];
-          }
-          dimensionScores[dimension].push(score);
-        });
+      const questionId = answer.questionId as { dimension?: string } | undefined;
+      const dimension = questionId?.dimension;
+      if (dimension && typeof dimension === 'string') {
+        answersByDimension[dimension] = (answersByDimension[dimension] || 0) + 1;
+      }
+      if (answer.responseTime) {
+        responseTimes.push(answer.responseTime);
       }
     });
 
-    // Calculate average for each dimension
-    const avgDimensionScores: { [key: string]: number } = {};
-    Object.entries(dimensionScores).forEach(([dimension, scores]) => {
-      avgDimensionScores[dimension] = scores.reduce((sum, score) => sum + score, 0) / scores.length;
-    });
-
-    return avgDimensionScores;
-  }
-
-  private calculateResponseTimeStats(answers: AssessmentAnswer[]): ResponseTimeStats {
-    const responseTimes = answers
-      .filter(answer => typeof answer.responseTime === 'number')
-      .map(answer => answer.responseTime!);
-    
-    if (responseTimes.length === 0) {
-      return { average: 0, min: 0, max: 0 };
+    let responseTimeStats;
+    if (responseTimes.length > 0) {
+      responseTimeStats = {
+        average: responseTimes.reduce((sum, time) => sum + time, 0) / responseTimes.length,
+        min: Math.min(...responseTimes),
+        max: Math.max(...responseTimes),
+      };
     }
 
     return {
-      average: responseTimes.reduce((sum, time) => sum + time, 0) / responseTimes.length,
-      min: Math.min(...responseTimes),
-      max: Math.max(...responseTimes),
+      totalAnswered: answers.length,
+      answersByDimension,
+      responseTimeStats,
     };
   }
+
 
   private buildQuery(filters: Partial<AssessmentAnswer>): Record<string, any> {
     const query: Record<string, any> = {};
 
-    if (filters.sessionId) {
-      const sessionId = String(filters.sessionId);
-      if (Types.ObjectId.isValid(sessionId)) {
-        query.sessionId = new Types.ObjectId(sessionId);
-      }
-    }
-
     if (filters.questionId) {
-      const questionId = String(filters.questionId);
-      if (Types.ObjectId.isValid(questionId)) {
-        query.questionId = new Types.ObjectId(questionId);
-      }
+      const questionId = typeof filters.questionId === 'string' ? filters.questionId : String(filters.questionId);
+      query.questionId = new Types.ObjectId(questionId);
     }
 
     if (filters.userId) {
-      const userId = String(filters.userId);
-      if (Types.ObjectId.isValid(userId)) {
-        query.userId = new Types.ObjectId(userId);
-      }
+      const userId = typeof filters.userId === 'string' ? filters.userId : String(filters.userId);
+      query.userId = new Types.ObjectId(userId);
     }
 
     return query;

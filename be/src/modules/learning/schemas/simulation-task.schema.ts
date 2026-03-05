@@ -74,7 +74,7 @@ export class SimulationTask {
   };
 
   // Skills this task evaluates/develops
-  @Prop({ required: true })
+  @Prop({ required: true, type: [Object] })
   skillsEvaluated!: {
     skillName: string;
     skillCategory: 'technical' | 'soft' | 'leadership';
@@ -82,7 +82,7 @@ export class SimulationTask {
   }[];
 
   // Evaluation rubric
-  @Prop({ required: true })
+  @Prop({ required: true, type: [Object] })
   evaluationRubric!: {
     criteria: string;
     description: string;

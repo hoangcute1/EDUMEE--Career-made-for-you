@@ -1,28 +1,18 @@
-import { IsOptional, IsNumber } from 'class-validator';
+import { IsOptional, IsNumber, IsString, IsIn } from 'class-validator';
 
 export class UpdateAssessmentAnswerDto {
   @IsOptional()
-  answer?: any;
+  @IsString()
+  @IsIn(['A', 'B', 'C', 'D'])
+  answer?: string; // Chỉ A, B, C, D
 
   @IsOptional()
   @IsNumber()
-  rawScore?: number;
+  responseTime?: number; // Thời gian trả lời (milliseconds)
 
   @IsOptional()
-  @IsNumber()
-  normalizedScore?: number;
-
-  @IsOptional()
-  dimensionScores?: any;
-
-  @IsOptional()
-  @IsNumber()
-  confidenceLevel?: number;
-
-  @IsOptional()
-  @IsNumber()
-  responseTime?: number;
-
-  @IsOptional()
-  metadata?: any;
+  metadata?: {
+    skipped?: boolean;
+    notes?: string;
+  };
 }

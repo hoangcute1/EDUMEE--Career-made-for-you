@@ -2,7 +2,7 @@ import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import { 
   IsString, 
   IsOptional, 
-  IsDateString,
+  IsDate,
   IsEnum,
   IsNumber,
   MaxLength,
@@ -10,12 +10,51 @@ import {
   Max,
   IsObject
 } from 'class-validator';
+import { Transform} from 'class-transformer';
 import { Gender, EducationLevel, BudgetLevel } from '../schemas/user-profile.schema';
 
+// Custom date transformation function
+const transformDate = ({ value }: { value: any }): Date | undefined => {
+  if (!value) return undefined;
+  
+  if (value instanceof Date) return value;
+  
+  if (typeof value === 'string') {
+    // Handle different date formats
+    const dateStr = value.trim();
+    
+    // DD/MM/YYYY or DD-MM-YYYY format
+    if (/^\d{1,2}[/-]\d{1,2}[/-]\d{4}$/.test(dateStr)) {
+      const parts = dateStr.split(/[/-]/);
+      const day = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10) - 1; // Month is 0-indexed
+      const year = parseInt(parts[2], 10);
+      return new Date(year, month, day);
+    }
+    
+    // YYYY-MM-DD format
+    if (/^\d{4}-\d{1,2}-\d{1,2}$/.test(dateStr)) {
+      return new Date(dateStr);
+    }
+    
+    // ISO 8601 format
+    const isoDate = new Date(dateStr);
+    if (!isNaN(isoDate.getTime())) {
+      return isoDate;
+    }
+  }
+  
+  return undefined;
+};
+
 export class CreateUserProfileDto {
-  @ApiPropertyOptional({ example: '2002-05-15T00:00:00.000Z' })
+  @ApiPropertyOptional({ 
+    example: '15/05/2002', 
+    description: 'Date of birth. Accepts formats: DD/MM/YYYY, DD-MM-YYYY, YYYY-MM-DD' 
+  })
   @IsOptional()
-  @IsDateString()
+  @Transform(transformDate)
+  @IsDate({ message: 'dob must be a valid date. Accepted formats: DD/MM/YYYY, DD-MM-YYYY, YYYY-MM-DD' })
   dob?: Date;
 
   @ApiPropertyOptional({ example: 'vi-VN' })
@@ -78,7 +117,10 @@ export class UserProfileResponseDto {
   @ApiProperty({ example: '507f1f77bcf86cd799439011' })
   userId!: string;
 
-  @ApiPropertyOptional({ example: '2002-05-15T00:00:00.000Z' })
+  @ApiPropertyOptional({ 
+    example: '15/05/2002', 
+    description: 'Date of birth in DD/MM/YYYY format' 
+  })
   dob?: Date;
 
   @ApiPropertyOptional({ example: 'vi-VN' })
