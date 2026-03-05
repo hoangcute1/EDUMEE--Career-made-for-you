@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString, IsOptional, IsEnum, IsArray, IsNumber } from 'class-validator';
+import { IsNotEmpty, IsString, IsOptional, IsEnum, IsNumber } from 'class-validator';
 import { QuestionType, AssessmentDimension } from '../schemas/assessment-question.schema';
 
 export class CreateAssessmentQuestionDto {

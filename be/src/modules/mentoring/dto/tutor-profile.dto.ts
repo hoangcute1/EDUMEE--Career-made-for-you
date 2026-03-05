@@ -3,15 +3,8 @@ import {
   IsString,
   IsEnum,
   IsOptional,
-  IsArray,
-  ValidateNested,
-  IsNumber,
-  Min,
-  Max,
-  IsBoolean,
   IsObject,
 } from 'class-validator';
-import { Type } from 'class-transformer';
 import { TutorStatus, TutorLevel } from '../schemas/tutor-profile.schema';
 import { ExperienceLevel } from '../../careers/schemas/career.schema';
 

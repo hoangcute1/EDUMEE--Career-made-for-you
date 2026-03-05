@@ -3,11 +3,7 @@ import {
   IsString,
   IsEnum,
   IsOptional,
-  IsArray,
-  IsNumber,
-  IsBoolean,
-  IsObject,
-  IsDateString,
+    IsObject
 } from 'class-validator';
 import { BookingStatus, SessionType } from '../schemas/booking-session.schema';
 

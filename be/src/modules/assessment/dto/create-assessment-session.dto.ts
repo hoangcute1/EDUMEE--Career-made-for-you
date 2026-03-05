@@ -1,6 +1,4 @@
-import { IsNotEmpty, IsString, IsOptional, IsEnum, IsArray, ValidateNested } from 'class-validator';
-import { Type } from 'class-transformer';
-import { Types } from 'mongoose';
+import { IsNotEmpty, IsString, IsOptional, IsEnum, IsArray } from 'class-validator';
 import { AssessmentStatus, AssessmentType } from '../schemas/assessment-session.schema';
 
 export class CreateAssessmentSessionDto {

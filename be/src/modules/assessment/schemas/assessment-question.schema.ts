@@ -46,7 +46,7 @@ export enum AssessmentDimension {
   collection: 'assessment_questions',
   toJSON: {
     virtuals: true,
-    transform: (doc: any, ret: any) => {
+    transform: (_doc: any, ret: Record<string, unknown>) => {
       ret.id = ret._id;
       delete ret._id;
       delete ret.__v;

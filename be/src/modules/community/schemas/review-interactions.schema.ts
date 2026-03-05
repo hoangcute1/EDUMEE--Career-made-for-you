@@ -17,7 +17,7 @@ export enum VoteType {
   collection: 'review_votes',
   toJSON: {
     virtuals: true,
-    transform: (doc: any, ret: any) => {
+    transform: (_doc: Document, ret: Record<string, unknown>): Record<string, unknown> => {
       ret.id = ret._id;
       delete ret._id;
       delete ret.__v;
@@ -123,7 +123,7 @@ export enum ReportSeverity {
   collection: 'review_reports',
   toJSON: {
     virtuals: true,
-    transform: (doc: any, ret: any) => {
+     transform: (_doc: Document, ret: Record<string, unknown>): Record<string, unknown> => {
       ret.id = ret._id;
       delete ret._id;
       delete ret.__v;

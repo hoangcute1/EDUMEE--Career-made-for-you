@@ -1,12 +1,38 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { Model, Types, FilterQuery } from 'mongoose';
 import {
   WeeklyPlan,
   WeeklyPlanDocument,
   PlanStatus,
 } from '../schemas/weekly-plan.schema';
 import { CreateWeeklyPlanDto, UpdateWeeklyPlanDto } from '../dto';
+
+interface PlannedActivity {
+  activityId: string;
+  status: string;
+  estimatedHours: number;
+  actualHours?: number;
+  completedAt?: Date;
+  notes?: string;
+  priority?: string;
+  deadline?: Date;
+  scheduledDays?: { day: string; duration: number }[];
+}
+
+interface SkillProgress {
+  skillName: string;
+  practiceHours: number;
+}
+
+interface ActivityUpdate {
+  [key: string]: unknown;
+}
+
+interface UserFeedback {
+  [key: string]: unknown;
+  feedbackDate?: Date;
+}
 
 @Injectable()
 export class WeeklyPlanService {
@@ -39,7 +65,7 @@ export class WeeklyPlanService {
   }> {
     const skip = (page - 1) * limit;
     
-    const query = this.buildQuery(filters);
+    const query: FilterQuery<WeeklyPlanDocument> = this.buildQuery(filters);
     
     const [data, total] = await Promise.all([
       this.weeklyPlanModel
@@ -145,7 +171,7 @@ export class WeeklyPlanService {
   async updateActivity(
     planId: string,
     activityId: string,
-    activityUpdate: any,
+    activityUpdate: ActivityUpdate,
   ): Promise<WeeklyPlan> {
     if (!Types.ObjectId.isValid(planId)) {
       throw new BadRequestException('Invalid plan ID');
@@ -178,16 +204,19 @@ export class WeeklyPlanService {
     };
 
     if (actualHours !== undefined) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       updateData['plannedActivities.$.actualHours'] = actualHours;
     }
 
     if (notes) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       updateData['plannedActivities.$.notes'] = notes;
     }
 
     const plan = await this.weeklyPlanModel
       .findOneAndUpdate(
         { _id: planId, 'plannedActivities.activityId': activityId },
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         { $set: updateData },
         { new: true }
       )
@@ -202,7 +231,7 @@ export class WeeklyPlanService {
 
   async addActivity(
     planId: string,
-    newActivity: any,
+    newActivity: PlannedActivity,
   ): Promise<WeeklyPlan> {
     if (!Types.ObjectId.isValid(planId)) {
       throw new BadRequestException('Invalid plan ID');
@@ -334,9 +363,9 @@ export class WeeklyPlanService {
 
   async completeWeek(
     planId: string,
-    userFeedback: any,
+    userFeedback: UserFeedback,
   ): Promise<WeeklyPlan> {
-    const plan = await this.calculateWeeklyProgress(planId);
+    await this.calculateWeeklyProgress(planId);
     
     const updateData = {
       status: PlanStatus.COMPLETED,
@@ -358,12 +387,11 @@ export class WeeklyPlanService {
       .filter(a => a.status === 'deferred' || a.status === 'not_started')
       .map(a => a.activityId);
 
-    const challengeAreas = plan.weeklyProgress?.challenges || [];
     const skillProgress = plan.weeklyProgress?.skillProgress || [];
 
     const recommendations = {
       carryOverTasks,
-      newFocusAreas: this.identifyFocusAreas(challengeAreas, skillProgress),
+      newFocusAreas: this.identifyFocusAreas(skillProgress),
       adjustmentRecommendations: this.generateAdjustments(plan),
       mentorInputNeeded: this.shouldInvolveMentor(plan),
     };
@@ -378,7 +406,7 @@ export class WeeklyPlanService {
   }
 
   async getPlanStatistics(userId?: string): Promise<any> {
-    const matchStage: any = {};
+    const matchStage: Record<string, unknown> = {};
     if (userId) {
       if (!Types.ObjectId.isValid(userId)) {
         throw new BadRequestException('Invalid user ID');
@@ -424,12 +452,15 @@ export class WeeklyPlanService {
     }
 
     if (updateDto.userId) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       updateDto.userId = new Types.ObjectId(updateDto.userId) as any;
     }
     if (updateDto.roadmapId) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       updateDto.roadmapId = new Types.ObjectId(updateDto.roadmapId) as any;
     }
     if (updateDto.weeklyCheckpoint) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       updateDto.weeklyCheckpoint = new Types.ObjectId(updateDto.weeklyCheckpoint) as any;
     }
 
@@ -458,15 +489,15 @@ export class WeeklyPlanService {
     }
   }
 
-  private buildQuery(filters: Partial<WeeklyPlan>): any {
-    const query: any = {};
+  private buildQuery(filters: Partial<WeeklyPlan>): FilterQuery<WeeklyPlanDocument> {
+    const query: FilterQuery<WeeklyPlanDocument> = {};
 
     if (filters.userId) {
-      query.userId = new Types.ObjectId(filters.userId as any);
+      query.userId = new Types.ObjectId(String(filters.userId));
     }
 
     if (filters.roadmapId) {
-      query.roadmapId = new Types.ObjectId(filters.roadmapId as any);
+      query.roadmapId = new Types.ObjectId(String(filters.roadmapId));
     }
 
     if (filters.status) {
@@ -521,6 +552,7 @@ export class WeeklyPlanService {
     });
 
     return Array.from(skillMap.entries()).map(([skillName, practiceHours]) => ({
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       skillName,
       practiceHours: Math.round(practiceHours * 100) / 100,
       improvement: 0, // Would be calculated based on assessments
@@ -566,11 +598,11 @@ export class WeeklyPlanService {
     return challenges;
   }
 
-  private identifyFocusAreas(challenges: string[], skillProgress: any[]): string[] {
+  private identifyFocusAreas(skillProgress: SkillProgress[]): string[] {
     const focusAreas: string[] = [];
 
     // Identify skills that need more attention
-    skillProgress.forEach(skill => {
+    skillProgress.forEach((skill: SkillProgress) => {
       if (skill.practiceHours < 2) { // Less than 2 hours practice
         focusAreas.push(`More focus needed on ${skill.skillName}`);
       }

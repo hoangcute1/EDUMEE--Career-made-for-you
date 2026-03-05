@@ -71,7 +71,7 @@ export class AssessmentQuestionService {
   }
 
   async findByType(type: QuestionType, sessionId?: string): Promise<AssessmentQuestion[]> {
-    const query: any = { type };
+    const query: Record<string, unknown> = { type };
     
     if (sessionId) {
       if (!Types.ObjectId.isValid(sessionId)) {
@@ -148,11 +148,11 @@ export class AssessmentQuestionService {
     return this.assessmentQuestionModel.insertMany(questionsWithSessionId) as any as Promise<AssessmentQuestion[]>;
   }
 
-  private buildQuery(filters: Partial<AssessmentQuestion>): any {
-    const query: any = {};
+  private buildQuery(filters: Partial<AssessmentQuestion>): Record<string, unknown> {
+    const query: Record<string, unknown> = {};
 
     if (filters.sessionId) {
-      query.sessionId = new Types.ObjectId(filters.sessionId as any);
+      query.sessionId = filters.sessionId instanceof Types.ObjectId ? filters.sessionId : new Types.ObjectId(filters.sessionId as unknown as string);
     }
 
     if (filters.questionType) {

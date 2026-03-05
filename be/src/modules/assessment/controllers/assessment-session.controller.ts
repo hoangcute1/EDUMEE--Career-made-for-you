@@ -19,6 +19,7 @@ import {
   ApiQuery,
   ApiBearerAuth,
 } from '@nestjs/swagger';
+import { Types } from 'mongoose';
 import { AssessmentSessionService } from '../services/assessment-session.service';
 import { CreateAssessmentSessionDto, UpdateAssessmentSessionDto } from '../dto';
 import { AssessmentStatus } from '../schemas/assessment-session.schema';
@@ -58,9 +59,9 @@ export class AssessmentSessionController {
     @Query('status') status?: AssessmentStatus,
     @Query('userId') userId?: string,
   ) {
-    const filters: any = {};
+    const filters: Partial<{ status: AssessmentStatus; userId?: Types.ObjectId }> = {};
     if (status) filters.status = status;
-    if (userId) filters.userId = userId;
+    if (userId) filters.userId = new Types.ObjectId(userId);
 
     return this.assessmentSessionService.findAll(
       page ? Number(page) : 1,
@@ -77,7 +78,7 @@ export class AssessmentSessionController {
     description: 'User assessment sessions retrieved successfully' 
   })
   async findMysessions(
-    @CurrentUser() user: any,
+    @CurrentUser() user: { id: string },
     @Query('status') status?: AssessmentStatus,
   ) {
     return this.assessmentSessionService.findByUser(user.id, status);
@@ -105,7 +106,7 @@ export class AssessmentSessionController {
     status: 200, 
     description: 'Session statistics retrieved successfully' 
   })
-  async getStats(@Param('id') id: string) {
+  async getStats(@Param('id') id: string): Promise<any> {
     return this.assessmentSessionService.getSessionStats(id);
   }
 

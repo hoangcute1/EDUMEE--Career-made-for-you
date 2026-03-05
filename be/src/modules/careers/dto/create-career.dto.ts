@@ -1,5 +1,5 @@
-import { IsNotEmpty, IsString, IsOptional, IsEnum, IsArray, IsNumber, IsUrl } from 'class-validator';
-import { CareerCategory, ExperienceLevel } from '../schemas/career.schema';
+import { IsNotEmpty, IsString, IsOptional, IsEnum, IsArray} from 'class-validator';
+import { CareerCategory } from '../schemas/career.schema';
 
 export class CreateCareerDto {
   @IsNotEmpty()

@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { Model, Types, FilterQuery } from 'mongoose';
 import { AssessmentSession, AssessmentSessionDocument, AssessmentStatus } from '../schemas/assessment-session.schema';
 import { CreateAssessmentSessionDto, UpdateAssessmentSessionDto } from '../dto';
 
@@ -64,7 +64,7 @@ export class AssessmentSessionService {
       throw new BadRequestException('Invalid user ID');
     }
 
-    const query: any = { userId: new Types.ObjectId(userId) };
+    const query: FilterQuery<AssessmentSessionDocument> = { userId: new Types.ObjectId(userId) };
     if (status) {
       query.status = status;
     }
@@ -108,7 +108,14 @@ export class AssessmentSessionService {
     }
   }
 
-  async getSessionStats(sessionId: string): Promise<any> {
+  async getSessionStats(sessionId: string): Promise<{
+    sessionId: string;
+    status: AssessmentStatus;
+    type: string;
+    progressTracking: any;
+    sessionMetrics: any;
+    results: any;
+  }> {
     if (!Types.ObjectId.isValid(sessionId)) {
       throw new BadRequestException('Invalid session ID');
     }
@@ -126,8 +133,8 @@ export class AssessmentSessionService {
     };
   }
 
-  private buildQuery(filters: Partial<AssessmentSession>): any {
-    const query: any = {};
+  private buildQuery(filters: Partial<AssessmentSession>): FilterQuery<AssessmentSessionDocument> {
+    const query: FilterQuery<AssessmentSessionDocument> = {};
 
     if (filters.status) {
       query.status = filters.status;
@@ -137,8 +144,8 @@ export class AssessmentSessionService {
       query.type = filters.type;
     }
 
-    if (filters.userId) {
-      query.userId = new Types.ObjectId(filters.userId as any);
+    if (filters.userId && typeof filters.userId === 'string') {
+      query.userId = new Types.ObjectId(filters.userId);
     }
 
     return query;

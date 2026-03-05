@@ -1,4 +1,4 @@
-import { CareerCategory, ExperienceLevel } from '../schemas/career.schema';
+import { CareerCategory } from '../schemas/career.schema';
 
 export class CareerResponseDto {
   id!: string;

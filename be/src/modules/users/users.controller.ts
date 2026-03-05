@@ -79,6 +79,7 @@ export class UsersController {
   ) {
     // Validate current password
     const isCurrentPasswordValid = await this.usersService.validatePassword(
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       user as any,
       changePasswordDto.currentPassword
     );

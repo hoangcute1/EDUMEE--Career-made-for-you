@@ -5,6 +5,21 @@ import { CareerComparison, CareerComparisonDocument } from '../schemas/career-co
 import { CreateCareerComparisonDto, UpdateCareerComparisonDto } from '../dto';
 import { CareerService } from './career.service';
 
+interface CareerData {
+  _id: Types.ObjectId;
+  title: string;
+  category: string;
+  industry?: string;
+  requiredSkills?: string[];
+  preferredSkills?: string[];
+  careerPath?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
+interface ComparisonQuery {
+  userId?: Types.ObjectId;
+}
+
 @Injectable()
 export class CareerComparisonService {
   constructor(
@@ -33,7 +48,7 @@ export class CareerComparisonService {
   ): Promise<{ data: CareerComparison[]; total: number; page: number; limit: number }> {
     const skip = (page - 1) * limit;
     
-    const query = this.buildQuery(filters);
+    const query: ComparisonQuery = this.buildQuery(filters);
     
     const [data, total] = await Promise.all([
       this.careerComparisonModel
@@ -89,15 +104,15 @@ export class CareerComparisonService {
 
     return {
       careers,
-      comparison: this.generateSideBySideComparison(careers),
-      summary: this.generateComparisonSummary(careers),
+      comparison: this.generateSideBySideComparison(careers as unknown as CareerData[]),
+      summary: this.generateComparisonSummary(careers as unknown as CareerData[]),
     };
   }
 
   async generateDetailedComparison(
     userId: string, 
     careerIds: string[],
-    criteria?: any
+    criteria?: Record<string, unknown>
   ): Promise<any> {
     const careerObjectIds = await this.validateCareerIds(careerIds);
     
@@ -109,9 +124,9 @@ export class CareerComparisonService {
       userId,
       careerIds,
       careers,
-      detailedAnalysis: this.performDetailedAnalysis(careers, criteria),
-      recommendations: this.generateRecommendations(careers),
-      scoreBreakdown: this.calculateScoreBreakdown(careers, criteria),
+      detailedAnalysis: this.performDetailedAnalysis(careers as unknown as CareerData[]),
+      recommendations: this.generateRecommendations(careers as unknown as CareerData[]),
+      scoreBreakdown: this.calculateScoreBreakdown(careers as unknown as CareerData[]),
     };
 
     // Save the comparison for future reference
@@ -137,8 +152,7 @@ export class CareerComparisonService {
     }
 
     if (updateDto.careerIds) {
-      await this.validateCareerIds(updateDto.careerIds);
-      updateDto.careerIds = updateDto.careerIds.map(id => new Types.ObjectId(id)) as any;
+      updateDto.careerIds = (await this.validateCareerIds(updateDto.careerIds)).map(id => id.toString());
     }
 
     const comparison = await this.careerComparisonModel
@@ -201,7 +215,7 @@ export class CareerComparisonService {
     return objectIds;
   }
 
-  private generateSideBySideComparison(careers: any[]): any {
+  private generateSideBySideComparison(careers: CareerData[]): Record<string, unknown> {
     const comparisonFields = [
       'title',
       'category',
@@ -212,7 +226,7 @@ export class CareerComparisonService {
       'workEnvironment',
     ];
 
-    const comparison: any = {};
+    const comparison: Record<string, unknown> = {};
     
     comparisonFields.forEach(field => {
       comparison[field] = careers.map(career => ({
@@ -225,7 +239,7 @@ export class CareerComparisonService {
     return comparison;
   }
 
-  private generateComparisonSummary(careers: any[]): any {
+  private generateComparisonSummary(careers: CareerData[]): Record<string, unknown> {
     return {
       totalCareers: careers.length,
       categories: [...new Set(careers.map(c => c.category))],
@@ -235,32 +249,29 @@ export class CareerComparisonService {
     };
   }
 
-  private performDetailedAnalysis(careers: any[], criteria?: any): any {
-    // This would perform more sophisticated analysis based on criteria
+  private performDetailedAnalysis(careers: CareerData[]): Record<string, unknown> {
     return {
       skillsAlignment: this.analyzeSkillsAlignment(careers),
       careerProgression: this.analyzeCareerProgression(careers),
       marketDemand: this.analyzeMarketDemand(careers),
-      compatibility: this.analyzeCompatibility(careers),
+      compatibility: this.analyzeCompatibility(),
     };
   }
 
-  private generateRecommendations(careers: any[]): any {
-    // Generate intelligent recommendations based on career comparison
+  private generateRecommendations(careers: CareerData[]): Record<string, unknown> {
     return {
-      bestMatch: careers[0]?._id, // This would use more sophisticated logic
+      bestMatch: careers[0]?._id,
       reasonsForRecommendation: ['High skill alignment', 'Strong market demand'],
       alternativeOptions: careers.slice(1, 3).map(c => c._id),
       developmentSuggestions: ['Focus on technical skills', 'Consider additional certifications'],
     };
   }
 
-  private calculateScoreBreakdown(careers: any[], criteria?: any): any {
-    // Calculate weighted scores based on different criteria
+  private calculateScoreBreakdown(careers: CareerData[]): Record<string, unknown>[] {
     return careers.map(career => ({
       careerId: career._id,
       careerTitle: career.title,
-      overallScore: 85, // This would be calculated based on actual criteria
+      overallScore: 85,
       criteriaScores: {
         skillMatch: 90,
         salaryPotential: 80,
@@ -270,7 +281,7 @@ export class CareerComparisonService {
     }));
   }
 
-  private findCommonSkills(careers: any[]): string[] {
+  private findCommonSkills(careers: CareerData[]): string[] {
     const allSkills = careers.flatMap(career => [
       ...(career.requiredSkills || []),
       ...(career.preferredSkills || []),
@@ -282,32 +293,31 @@ export class CareerComparisonService {
     }, {} as Record<string, number>);
 
     return Object.entries(skillCounts)
-      .filter(([_, count]) => (count as number) > 1)
-      .map(([skill, _]) => skill);
+      .filter(([, count]) => count > 1)
+      .map(([skill]) => skill);
   }
 
-  private findUniqueAspects(careers: any[]): any[] {
+  private findUniqueAspects(careers: CareerData[]): Record<string, unknown>[] {
     return careers.map(career => ({
       careerId: career._id,
       uniqueSkills: career.requiredSkills?.filter((skill: string) =>
         !this.isCommonSkillAcrossCareers(skill, careers)
       ) || [],
-      uniqueFeatures: this.extractUniqueFeatures(career, careers),
+      uniqueFeatures: this.extractUniqueFeatures(),
     }));
   }
 
-  private isCommonSkillAcrossCareers(skill: string, careers: any[]): boolean {
+  private isCommonSkillAcrossCareers(skill: string, careers: CareerData[]): boolean {
     return careers.filter(career =>
       career.requiredSkills?.includes(skill) || career.preferredSkills?.includes(skill)
     ).length > 1;
   }
 
-  private extractUniqueFeatures(career: any, allCareers: any[]): string[] {
-    // This would extract unique aspects of each career compared to others
-    return ['Remote work options', 'Creative freedom']; // Placeholder
+  private extractUniqueFeatures(): string[] {
+    return ['Remote work options', 'Creative freedom'];
   }
 
-  private analyzeSkillsAlignment(careers: any[]): any {
+  private analyzeSkillsAlignment(careers: CareerData[]): Record<string, unknown> {
     return {
       overlapPercentage: 75,
       transferableSkills: ['Communication', 'Problem solving'],
@@ -318,7 +328,7 @@ export class CareerComparisonService {
     };
   }
 
-  private analyzeCareerProgression(careers: any[]): any {
+  private analyzeCareerProgression(careers: CareerData[]): Record<string, unknown>[] {
     return careers.map(career => ({
       careerId: career._id,
       progressionPath: career.careerPath || {},
@@ -327,16 +337,16 @@ export class CareerComparisonService {
     }));
   }
 
-  private analyzeMarketDemand(careers: any[]): any {
+  private analyzeMarketDemand(careers: CareerData[]): Record<string, unknown>[] {
     return careers.map(career => ({
       careerId: career._id,
-      demandLevel: 'High', // This would come from market data
-      jobGrowthRate: '15%', // This would come from labor statistics
+      demandLevel: 'High',
+      jobGrowthRate: '15%',
       competitionLevel: 'Moderate',
     }));
   }
 
-  private analyzeCompatibility(careers: any[]): any {
+  private analyzeCompatibility(): Record<string, string> {
     return {
       personalityFit: 'High',
       skillsCompatibility: 'Moderate',
@@ -345,11 +355,11 @@ export class CareerComparisonService {
     };
   }
 
-  private buildQuery(filters: Partial<CareerComparison>): any {
-    const query: any = {};
+  private buildQuery(filters: Partial<CareerComparison>): ComparisonQuery {
+    const query: ComparisonQuery = {};
 
     if (filters.userId) {
-      query.userId = new Types.ObjectId(filters.userId as any);
+      query.userId = new Types.ObjectId(filters.userId as unknown as string);
     }
 
     return query;

@@ -225,8 +225,8 @@ export class CareerFitResultService {
     };
   }
 
-  private generateRecommendations(results: CareerFitResult[]): any {
-    if (results.length === 0) return [];
+  private generateRecommendations(results: CareerFitResult[]): Record<string, unknown> {
+    if (results.length === 0) return {};
 
     const topResult = results[0];
     
@@ -238,19 +238,22 @@ export class CareerFitResultService {
     };
   }
 
-  private buildQuery(filters: Partial<CareerFitResult>): any {
-    const query: any = {};
+  private buildQuery(filters: Partial<CareerFitResult>): Record<string, unknown> {
+    const query: Record<string, unknown> = {};
 
     if (filters.sessionId) {
-      query.sessionId = new Types.ObjectId(filters.sessionId as any);
+      const sessionId = filters.sessionId as unknown as string;
+      query.sessionId = Types.ObjectId.createFromHexString(sessionId);
     }
 
     if (filters.userId) {
-      query.userId = new Types.ObjectId(filters.userId as any);
+      const userId = filters.userId as unknown as string;
+      query.userId = Types.ObjectId.createFromHexString(userId);
     }
 
     if (filters.careerId) {
-      query.careerId = new Types.ObjectId(filters.careerId as any);
+      const careerId = filters.careerId as unknown as string;
+      query.careerId = Types.ObjectId.createFromHexString(careerId);
     }
 
     if (filters.overallFitScore) {

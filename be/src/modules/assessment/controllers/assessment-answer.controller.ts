@@ -19,10 +19,15 @@ import {
   ApiQuery,
   ApiBearerAuth,
 } from '@nestjs/swagger';
+import { Types } from 'mongoose';
 import { AssessmentAnswerService } from '../services/assessment-answer.service';
 import { CreateAssessmentAnswerDto, UpdateAssessmentAnswerDto } from '../dto';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
+
+interface CurrentUserPayload {
+  id: string;
+}
 
 @ApiTags('Assessment Answers')
 @ApiBearerAuth()
@@ -69,10 +74,10 @@ export class AssessmentAnswerController {
     @Query('userId') userId?: string,
     @Query('questionId') questionId?: string,
   ) {
-    const filters: any = {};
-    if (sessionId) filters.sessionId = sessionId;
-    if (userId) filters.userId = userId;
-    if (questionId) filters.questionId = questionId;
+    const filters: Partial<Record<string, Types.ObjectId>> = {};
+    if (sessionId) filters.sessionId = new Types.ObjectId(sessionId);
+    if (userId) filters.userId = new Types.ObjectId(userId);
+    if (questionId) filters.questionId = new Types.ObjectId(questionId);
 
     return this.assessmentAnswerService.findAll(
       page ? Number(page) : 1,
@@ -99,7 +104,7 @@ export class AssessmentAnswerController {
     status: 200, 
     description: 'Session progress retrieved successfully' 
   })
-  async getSessionProgress(@Param('sessionId') sessionId: string) {
+  async getSessionProgress(@Param('sessionId') sessionId: string): Promise<any> {
     return this.assessmentAnswerService.calculateSessionProgress(sessionId);
   }
 
@@ -126,7 +131,7 @@ export class AssessmentAnswerController {
     description: 'User answers retrieved successfully' 
   })
   async findMyAnswers(
-    @CurrentUser() user: any,
+    @CurrentUser() user: CurrentUserPayload,
     @Query('sessionId') sessionId?: string,
   ) {
     return this.assessmentAnswerService.findByUser(user.id, sessionId);

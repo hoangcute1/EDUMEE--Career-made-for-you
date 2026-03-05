@@ -4,6 +4,19 @@ import { Model, Types } from 'mongoose';
 import { AssessmentAnswer, AssessmentAnswerDocument } from '../schemas/assessment-answer.schema';
 import { CreateAssessmentAnswerDto, UpdateAssessmentAnswerDto } from '../dto';
 
+interface SessionProgress {
+  totalAnswers: number;
+  averageScore: number;
+  dimensionBreakdown: Record<string, number>;
+  responseTimeStats: ResponseTimeStats;
+}
+
+interface ResponseTimeStats {
+  average: number;
+  min: number;
+  max: number;
+}
+
 @Injectable()
 export class AssessmentAnswerService {
   constructor(
@@ -83,7 +96,7 @@ export class AssessmentAnswerService {
       throw new BadRequestException('Invalid user ID');
     }
 
-    const query: any = { userId: new Types.ObjectId(userId) };
+    const query: Record<string, any> = { userId: new Types.ObjectId(userId) };
     
     if (sessionId) {
       if (!Types.ObjectId.isValid(sessionId)) {
@@ -143,7 +156,7 @@ export class AssessmentAnswerService {
     }
   }
 
-  async calculateSessionProgress(sessionId: string): Promise<any> {
+  async calculateSessionProgress(sessionId: string): Promise<SessionProgress> {
     if (!Types.ObjectId.isValid(sessionId)) {
       throw new BadRequestException('Invalid session ID');
     }
@@ -182,7 +195,7 @@ export class AssessmentAnswerService {
       : 0;
   }
 
-  private calculateDimensionScores(answers: AssessmentAnswer[]): any {
+  private calculateDimensionScores(answers: AssessmentAnswer[]): Record<string, number> {
     const dimensionScores: { [key: string]: number[] } = {};
     
     answers.forEach(answer => {
@@ -191,7 +204,7 @@ export class AssessmentAnswerService {
           if (!dimensionScores[dimension]) {
             dimensionScores[dimension] = [];
           }
-          dimensionScores[dimension].push(score as number);
+          dimensionScores[dimension].push(score);
         });
       }
     });
@@ -205,7 +218,7 @@ export class AssessmentAnswerService {
     return avgDimensionScores;
   }
 
-  private calculateResponseTimeStats(answers: AssessmentAnswer[]): any {
+  private calculateResponseTimeStats(answers: AssessmentAnswer[]): ResponseTimeStats {
     const responseTimes = answers
       .filter(answer => typeof answer.responseTime === 'number')
       .map(answer => answer.responseTime!);
@@ -221,19 +234,28 @@ export class AssessmentAnswerService {
     };
   }
 
-  private buildQuery(filters: Partial<AssessmentAnswer>): any {
-    const query: any = {};
+  private buildQuery(filters: Partial<AssessmentAnswer>): Record<string, any> {
+    const query: Record<string, any> = {};
 
     if (filters.sessionId) {
-      query.sessionId = new Types.ObjectId(filters.sessionId as any);
+      const sessionId = String(filters.sessionId);
+      if (Types.ObjectId.isValid(sessionId)) {
+        query.sessionId = new Types.ObjectId(sessionId);
+      }
     }
 
     if (filters.questionId) {
-      query.questionId = new Types.ObjectId(filters.questionId as any);
+      const questionId = String(filters.questionId);
+      if (Types.ObjectId.isValid(questionId)) {
+        query.questionId = new Types.ObjectId(questionId);
+      }
     }
 
     if (filters.userId) {
-      query.userId = new Types.ObjectId(filters.userId as any);
+      const userId = String(filters.userId);
+      if (Types.ObjectId.isValid(userId)) {
+        query.userId = new Types.ObjectId(userId);
+      }
     }
 
     return query;

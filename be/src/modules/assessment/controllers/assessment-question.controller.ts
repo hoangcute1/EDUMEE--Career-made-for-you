@@ -11,6 +11,7 @@ import {
   HttpStatus,
   UseGuards,
 } from '@nestjs/common';
+import { Types } from 'mongoose';
 import {
   ApiTags,
   ApiOperation,
@@ -71,8 +72,8 @@ export class AssessmentQuestionController {
     @Query('sessionId') sessionId?: string,
     @Query('type') type?: QuestionType,
   ) {
-    const filters: any = {};
-    if (sessionId) filters.sessionId = sessionId;
+    const filters: Partial<any> = {};
+    if (sessionId) filters.sessionId = new Types.ObjectId(sessionId);
     if (type) filters.type = type;
 
     return this.assessmentQuestionService.findAll(

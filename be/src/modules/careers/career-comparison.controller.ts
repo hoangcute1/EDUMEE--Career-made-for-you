@@ -31,6 +31,11 @@ import { CareerComparison } from './schemas/career-comparison.schema';
 import { JwtAuthGuard } from '../auth/guards';
 import { CurrentUser } from '../auth/decorators';
 
+interface AuthUser {
+  id: string;
+  [key: string]: any;
+}
+
 @ApiTags('Career Comparisons')
 @Controller('career-comparisons')
 @UseGuards(JwtAuthGuard)
@@ -57,7 +62,7 @@ export class CareerComparisonController {
   })
   async create(
     @Body() createCareerComparisonDto: CreateCareerComparisonDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthUser,
   ): Promise<CareerComparison> {
     // Ensure userId is set to current user
     const dto = { ...createCareerComparisonDto, userId: user.id };
@@ -108,7 +113,7 @@ export class CareerComparisonController {
     page: number;
     limit: number;
   }> {
-    const filters: any = {};
+    const filters: Record<string, string> = {};
     if (userId) filters.userId = userId;
 
     return this.careerComparisonService.findAll(page, limit, filters);
@@ -121,7 +126,7 @@ export class CareerComparisonController {
     description: 'User career comparisons retrieved successfully',
     type: [CareerComparisonResponseDto],
   })
-  async getMyComparisons(@CurrentUser() user: any): Promise<CareerComparison[]> {
+  async getMyComparisons(@CurrentUser() user: AuthUser): Promise<CareerComparison[]> {
     return this.careerComparisonService.findByUser(user.id);
   }
 
@@ -188,7 +193,7 @@ export class CareerComparisonController {
       careerIds: string[];
       criteria?: any;
     },
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthUser,
   ): Promise<any> {
     if (!careerIds || careerIds.length < 2) {
       throw new BadRequestException(
@@ -199,6 +204,7 @@ export class CareerComparisonController {
     return this.careerComparisonService.generateDetailedComparison(
       user.id,
       careerIds,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       criteria,
     );
   }
@@ -270,7 +276,6 @@ export class CareerComparisonController {
   async update(
     @Param('id') id: string,
     @Body() updateCareerComparisonDto: UpdateCareerComparisonDto,
-    @CurrentUser() user: any,
   ): Promise<CareerComparison> {
     // Verify ownership or admin access could be added here
     return this.careerComparisonService.update(id, updateCareerComparisonDto);
@@ -298,7 +303,6 @@ export class CareerComparisonController {
   })
   async remove(
     @Param('id') id: string,
-    @CurrentUser() user: any,
   ): Promise<void> {
     // Verify ownership or admin access could be added here
     return this.careerComparisonService.remove(id);

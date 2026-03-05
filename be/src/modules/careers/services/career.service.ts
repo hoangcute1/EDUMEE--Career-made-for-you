@@ -52,7 +52,7 @@ export class CareerService {
     return career;
   }
 
-  async getCategories(): Promise<string[]> {
+  getCategories(): string[] {
     return Object.values(CareerCategory);
   }
 
@@ -190,8 +190,8 @@ export class CareerService {
       .exec();
   }
 
-  private buildQuery(filters: Partial<Career>): any {
-    const query: any = {};
+  private buildQuery(filters: Partial<Career>): Record<string, unknown> {
+    const query: Record<string, unknown> = {};
 
     if (filters.category) {
       query.category = filters.category;

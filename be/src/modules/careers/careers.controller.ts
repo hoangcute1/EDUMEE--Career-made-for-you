@@ -111,12 +111,12 @@ export class CareerController {
     page: number;
     limit: number;
   }> {
-    const filters: any = {};
-    if (category) filters.category = category;
+    const filters: Record<string, any> = {};
+    if (category) filters.category = category as CareerCategory;
     if (industry) filters.industry = industry;
     if (experienceLevel) filters.experienceLevel = experienceLevel;
 
-    return this.careerService.findAll(page, limit, filters);
+    return this.careerService.findAll(page, limit, filters as Partial<Career>);
   }
 
   @Get('search')
@@ -152,25 +152,16 @@ export class CareerController {
     @Query('keyword') keyword?: string,
     @Query('salaryRange') salaryRange?: string,
   ): Promise<Career[]> {
-    const searchCriteria: any = {};
-    
-    if (skills) {
-      searchCriteria.skills = skills.split(',').map(skill => skill.trim());
-    }
-    
-    if (keyword) {
-      searchCriteria.keyword = keyword;
-    }
+    const searchTerm = keyword || skills || '';
     
     if (salaryRange) {
       const [min, max] = salaryRange.split('-').map(Number);
       if (isNaN(min) || isNaN(max)) {
         throw new BadRequestException('Invalid salary range format. Use: min-max');
       }
-      searchCriteria.salaryRange = { min, max };
     }
 
-    return this.careerService.searchCareers(searchCriteria);
+    return this.careerService.searchCareers(searchTerm);
   }
 
   @Get('categories')
@@ -183,7 +174,7 @@ export class CareerController {
       items: { type: 'string' },
     },
   })
-  async getCategories(): Promise<string[]> {
+  getCategories(): string[] {
     return this.careerService.getCategories();
   }
 

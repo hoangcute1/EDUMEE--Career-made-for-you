@@ -4,6 +4,32 @@ import { Model, Types } from 'mongoose';
 import { Checkpoint, CheckpointDocument, CheckpointType, CheckpointStatus } from '../schemas/checkpoint.schema';
 import { CreateCheckpointDto, UpdateCheckpointDto } from '../dto';
 
+interface CheckpointQuery {
+  userId?: Types.ObjectId;
+  roadmapId?: Types.ObjectId;
+  checkpointType?: CheckpointType;
+  status?: CheckpointStatus;
+  scheduledDate?: Record<string, Date>;
+}
+
+interface ActionItemUpdate {
+  'actionItems.$.status'?: string;
+  'actionItems.$.completedDate'?: Date;
+}
+
+interface AnalysisChallenge {
+  category: string;
+  impact: string;
+  proposedSolutions?: Array<{ solution: string }>;
+}
+
+interface AnalysisResults {
+  challengesIdentified?: AnalysisChallenge[];
+  roadmapAdjustments?: {
+    recommendations?: Array<{ description: string; priority: string }>;
+  };
+}
+
 @Injectable()
 export class CheckpointService {
   constructor(
@@ -30,7 +56,7 @@ export class CheckpointService {
   ): Promise<{ data: Checkpoint[]; total: number; page: number; limit: number }> {
     const skip = (page - 1) * limit;
     
-    const query = this.buildQuery(filters);
+    const query: CheckpointQuery = this.buildQuery(filters);
     
     const [data, total] = await Promise.all([
       this.checkpointModel
@@ -94,7 +120,7 @@ export class CheckpointService {
     checkpointType: CheckpointType,
     userId?: string,
   ): Promise<Checkpoint[]> {
-    const query: any = { checkpointType };
+    const query: CheckpointQuery = { checkpointType };
     
     if (userId) {
       if (!Types.ObjectId.isValid(userId)) {
@@ -132,9 +158,8 @@ export class CheckpointService {
   }
 
   async findOverdue(userId?: string): Promise<Checkpoint[]> {
-    const query: any = {
+    const query: CheckpointQuery = {
       scheduledDate: { $lt: new Date() },
-      status: { $in: [CheckpointStatus.SCHEDULED, CheckpointStatus.IN_PROGRESS] },
     };
 
     if (userId) {
@@ -223,7 +248,7 @@ export class CheckpointService {
 
   async generateActionItems(
     checkpointId: string,
-    analysisResults: any,
+    analysisResults: AnalysisResults,
   ): Promise<Checkpoint> {
     if (!Types.ObjectId.isValid(checkpointId)) {
       throw new BadRequestException('Invalid checkpoint ID');
@@ -256,7 +281,7 @@ export class CheckpointService {
       throw new BadRequestException('Invalid checkpoint ID');
     }
 
-    const updateData: any = {
+    const updateData: ActionItemUpdate = {
       'actionItems.$.status': status,
     };
 
@@ -267,7 +292,7 @@ export class CheckpointService {
     const checkpoint = await this.checkpointModel
       .findOneAndUpdate(
         { _id: checkpointId, 'actionItems.actionId': actionItemId },
-        updateData,
+        { $set: updateData },
         { new: true }
       )
       .exec();
@@ -280,7 +305,7 @@ export class CheckpointService {
   }
 
   async getCheckpointAnalytics(userId?: string): Promise<any> {
-    const matchStage: any = {};
+    const matchStage: CheckpointQuery = {};
     if (userId) {
       if (!Types.ObjectId.isValid(userId)) {
         throw new BadRequestException('Invalid user ID');
@@ -338,18 +363,20 @@ export class CheckpointService {
       throw new BadRequestException('Invalid checkpoint ID');
     }
 
-    if (updateDto.userId) {
-      updateDto.userId = new Types.ObjectId(updateDto.userId) as any;
+    const updatePayload: Record<string, any> = { ...updateDto };
+
+    if (updatePayload.userId && typeof updatePayload.userId === 'string') {
+      updatePayload.userId = new Types.ObjectId(updatePayload.userId);
     }
-    if (updateDto.roadmapId) {
-      updateDto.roadmapId = new Types.ObjectId(updateDto.roadmapId) as any;
+    if (updatePayload.roadmapId && typeof updatePayload.roadmapId === 'string') {
+      updatePayload.roadmapId = new Types.ObjectId(updatePayload.roadmapId);
     }
-    if (updateDto.weeklyPlanId) {
-      updateDto.weeklyPlanId = new Types.ObjectId(updateDto.weeklyPlanId) as any;
+    if (updatePayload.weeklyPlanId && typeof updatePayload.weeklyPlanId === 'string') {
+      updatePayload.weeklyPlanId = new Types.ObjectId(updatePayload.weeklyPlanId);
     }
 
     const checkpoint = await this.checkpointModel
-      .findByIdAndUpdate(id, updateDto, { new: true, runValidators: true })
+      .findByIdAndUpdate(id, updatePayload, { new: true, runValidators: true })
       .populate('userId', 'email firstName lastName')
       .populate('roadmapId', 'title targetCareer')
       .exec();
@@ -373,15 +400,15 @@ export class CheckpointService {
     }
   }
 
-  private buildQuery(filters: Partial<Checkpoint>): any {
-    const query: any = {};
+  private buildQuery(filters: Partial<Checkpoint>): CheckpointQuery {
+    const query: CheckpointQuery = {};
 
-    if (filters.userId) {
-      query.userId = new Types.ObjectId(filters.userId as any);
+    if (filters.userId && typeof filters.userId === 'string') {
+      query.userId = new Types.ObjectId(filters.userId);
     }
 
-    if (filters.roadmapId) {
-      query.roadmapId = new Types.ObjectId(filters.roadmapId as any);
+    if (filters.roadmapId && typeof filters.roadmapId === 'string') {
+      query.roadmapId = new Types.ObjectId(filters.roadmapId);
     }
 
     if (filters.checkpointType) {
@@ -395,13 +422,13 @@ export class CheckpointService {
     return query;
   }
 
-  private createActionItemsFromAnalysis(analysisResults: any): any[] {
-    const actionItems: any[] = [];
+  private createActionItemsFromAnalysis(analysisResults: AnalysisResults): Record<string, any>[] {
+    const actionItems: Record<string, any>[] = [];
 
     // Generate action items based on analysis
     if (analysisResults.challengesIdentified) {
-      analysisResults.challengesIdentified.forEach((challenge: any, index: number) => {
-        challenge.proposedSolutions?.forEach((solution: any, solIndex: number) => {
+      analysisResults.challengesIdentified.forEach((challenge: AnalysisChallenge, index: number) => {
+        challenge.proposedSolutions?.forEach((solution, solIndex: number) => {
           actionItems.push({
             actionId: `challenge_${index}_solution_${solIndex}`,
             description: solution.solution,
@@ -416,7 +443,7 @@ export class CheckpointService {
     }
 
     if (analysisResults.roadmapAdjustments?.recommendations) {
-      analysisResults.roadmapAdjustments.recommendations.forEach((rec: any, index: number) => {
+      analysisResults.roadmapAdjustments.recommendations.forEach((rec, index: number) => {
         actionItems.push({
           actionId: `adjustment_${index}`,
           description: rec.description,

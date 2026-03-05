@@ -19,6 +19,7 @@ import {
   ApiQuery,
   ApiBearerAuth,
 } from '@nestjs/swagger';
+import { Types } from 'mongoose';
 import { CareerFitResultService } from '../services/career-fit-result.service';
 import { CreateCareerFitResultDto, UpdateCareerFitResultDto } from '../dto';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
@@ -59,10 +60,10 @@ export class CareerFitResultController {
     @Query('userId') userId?: string,
     @Query('careerId') careerId?: string,
   ) {
-    const filters: any = {};
-    if (sessionId) filters.sessionId = sessionId;
-    if (userId) filters.userId = userId;
-    if (careerId) filters.careerId = careerId;
+    const filters: { sessionId?: Types.ObjectId; userId?: Types.ObjectId; careerId?: Types.ObjectId } = {};
+    if (sessionId) filters.sessionId = new Types.ObjectId(sessionId);
+    if (userId) filters.userId = new Types.ObjectId(userId);
+    if (careerId) filters.careerId = new Types.ObjectId(careerId);
 
     return this.careerFitResultService.findAll(
       page ? Number(page) : 1,
@@ -77,7 +78,7 @@ export class CareerFitResultController {
     status: 200, 
     description: 'Statistics retrieved successfully' 
   })
-  async getStatistics() {
+  async getStatistics(): Promise<any> {
     return this.careerFitResultService.getStatistics();
   }
 
@@ -118,7 +119,7 @@ export class CareerFitResultController {
     description: 'Top career matches retrieved successfully' 
   })
   async getMyTopMatches(
-    @CurrentUser() user: any,
+    @CurrentUser() user: { id: string },
     @Query('limit') limit?: number,
   ) {
     return this.careerFitResultService.getTopCareerMatches(
@@ -153,7 +154,7 @@ export class CareerFitResultController {
     description: 'User career fit results retrieved successfully' 
   })
   async findMyResults(
-    @CurrentUser() user: any,
+    @CurrentUser() user: { id: string },
     @Query('limit') limit?: number,
   ) {
     return this.careerFitResultService.findByUser(
@@ -183,7 +184,7 @@ export class CareerFitResultController {
   async generateComparisonReport(
     @Param('userId') userId: string,
     @Body('careerIds') careerIds: string[],
-  ) {
+  ): Promise<any> {
     return this.careerFitResultService.generateComparisonReport(userId, careerIds);
   }
 
@@ -194,9 +195,9 @@ export class CareerFitResultController {
     description: 'Career comparison report generated successfully' 
   })
   async generateMyComparisonReport(
-    @CurrentUser() user: any,
+    @CurrentUser() user: { id: string },
     @Body('careerIds') careerIds: string[],
-  ) {
+  ): Promise<any> {
     return this.careerFitResultService.generateComparisonReport(user.id, careerIds);
   }
 

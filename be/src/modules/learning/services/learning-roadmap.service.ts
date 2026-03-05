@@ -1,12 +1,81 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { Model, Types, Document } from 'mongoose';
 import {
   LearningRoadmap,
   LearningRoadmapDocument,
   RoadmapStatus,
 } from '../schemas/learning-roadmap.schema';
 import { CreateLearningRoadmapDto, UpdateLearningRoadmapDto } from '../dto';
+
+interface Milestone {
+  milestoneId: string;
+  title: string;
+  description: string;
+  skills: Skill[];
+  tasks: Task[];
+  completionCriteria?: Record<string, unknown>;
+}
+
+interface Skill {
+  skillName: string;
+  targetLevel?: number;
+  currentLevel?: number;
+}
+
+interface Task {
+  taskId: string;
+  taskTitle: string;
+  title?: string;
+  estimatedHours: number;
+  isRequired: boolean;
+  order?: number;
+}
+
+interface PhaseProgress {
+  phaseId: string;
+  progress: number;
+  completedAt?: Date;
+}
+
+interface SkillProgress {
+  skillName: string;
+  currentLevel: number;
+  startingLevel: number;
+  targetLevel: number;
+}
+
+interface IPhase {
+  phaseId: string;
+  phase?: string;
+  title: string;
+  description?: string;
+  estimatedDuration?: string;
+  objectives?: string[];
+  milestones: Milestone[];
+  order?: number;
+  prerequisites?: string[];
+}
+
+interface IWeeklyActivity {
+  date: string;
+  type: string;
+  title: string;
+  description: string;
+  completed: boolean;
+  activityId?: string;
+  taskId?: string;
+  estimatedHours?: number;
+  priority?: string;
+  status?: string;
+}
+
+interface IProgress {
+  currentPhase?: string;
+  phaseProgress?: PhaseProgress[];
+  skillProgress?: SkillProgress[];
+  overallProgress?: number;
+}
 
 @Injectable()
 export class LearningRoadmapService {
@@ -124,8 +193,11 @@ export class LearningRoadmapService {
       throw new BadRequestException('Specified roadmap is not a template');
     }
 
+    const templateDoc = template as unknown as Document;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    const templateObject: Record<string, any> = templateDoc.toObject ? templateDoc.toObject() : template;
     const clonedRoadmap = new this.learningRoadmapModel({
-      ...(template as any).toObject(),
+      ...templateObject,
       _id: undefined,
       userId: new Types.ObjectId(userId),
       title: `${template.title} (Copy)`,
@@ -143,7 +215,7 @@ export class LearningRoadmapService {
 
   async updateProgress(
     roadmapId: string,
-    progressUpdate: any,
+    progressUpdate: IProgress,
   ): Promise<LearningRoadmap> {
     if (!Types.ObjectId.isValid(roadmapId)) {
       throw new BadRequestException('Invalid roadmap ID');
@@ -167,7 +239,7 @@ export class LearningRoadmapService {
 
   async addAdaptation(
     roadmapId: string,
-    adaptation: any,
+    adaptation: Record<string, unknown>,
   ): Promise<LearningRoadmap> {
     if (!Types.ObjectId.isValid(roadmapId)) {
       throw new BadRequestException('Invalid roadmap ID');
@@ -191,7 +263,7 @@ export class LearningRoadmapService {
   async updatePhase(
     roadmapId: string,
     phaseId: string,
-    phaseUpdate: any,
+    phaseUpdate: IPhase,
   ): Promise<LearningRoadmap> {
     if (!Types.ObjectId.isValid(roadmapId)) {
       throw new BadRequestException('Invalid roadmap ID');
@@ -259,7 +331,7 @@ export class LearningRoadmapService {
     roadmapId: string,
     weekNumber: number,
     availableHours: number,
-  ): Promise<any> {
+  ): Promise<Record<string, unknown>> {
     const roadmap = await this.findOne(roadmapId);
     
     // Find current phase and milestones
@@ -272,7 +344,7 @@ export class LearningRoadmapService {
     const plannedActivities = this.generateActivitiesForWeek(
       currentPhase,
       availableHours,
-      roadmap.progress
+      roadmap.progress as IProgress,
     );
 
     return {
@@ -280,10 +352,10 @@ export class LearningRoadmapService {
       phase: currentPhase,
       plannedActivities,
       estimatedHours: plannedActivities.reduce(
-        (total, activity) => total + activity.estimatedHours,
+        (total, activity) => total + (activity.estimatedHours ?? 0),
         0
       ),
-      skillFocus: this.getWeeklySkillFocus(currentPhase, roadmap.progress),
+      skillFocus: this.getWeeklySkillFocus(currentPhase),
     };
   }
 
@@ -326,15 +398,26 @@ export class LearningRoadmapService {
       throw new BadRequestException('Invalid roadmap ID');
     }
 
-    if (updateDto.userId) {
-      updateDto.userId = new Types.ObjectId(updateDto.userId) as any;
+    const updateData: Record<string, unknown> = { ...updateDto };
+    if (updateData.userId) {
+      const userId = updateData.userId;
+      if (typeof userId === 'string') {
+        updateData.userId = new Types.ObjectId(userId);
+      } else if (userId instanceof Types.ObjectId) {
+        updateData.userId = userId;
+      }
     }
-    if (updateDto.targetCareer) {
-      updateDto.targetCareer = new Types.ObjectId(updateDto.targetCareer) as any;
+    if (updateData.targetCareer) {
+      const careerId = updateData.targetCareer;
+      if (typeof careerId === 'string') {
+        updateData.targetCareer = new Types.ObjectId(careerId);
+      } else if (careerId instanceof Types.ObjectId) {
+        updateData.targetCareer = careerId;
+      }
     }
 
     const roadmap = await this.learningRoadmapModel
-      .findByIdAndUpdate(id, updateDto, { new: true, runValidators: true })
+      .findByIdAndUpdate(id, updateData, { new: true, runValidators: true })
       .populate('userId', 'email firstName lastName')
       .populate('targetCareer', 'title category industry')
       .exec();
@@ -358,15 +441,15 @@ export class LearningRoadmapService {
     }
   }
 
-  private buildQuery(filters: Partial<LearningRoadmap>): any {
-    const query: any = {};
+  private buildQuery(filters: Partial<LearningRoadmap>): Record<string, unknown> {
+    const query: Record<string, unknown> = {};
 
     if (filters.userId) {
-      query.userId = new Types.ObjectId(filters.userId as any);
+      query.userId = new Types.ObjectId(String(filters.userId));
     }
 
     if (filters.targetCareer) {
-      query.targetCareer = new Types.ObjectId(filters.targetCareer as any);
+      query.targetCareer = new Types.ObjectId(String(filters.targetCareer));
     }
 
     if (filters.status) {
@@ -388,45 +471,90 @@ export class LearningRoadmapService {
     return query;
   }
 
-  private getCurrentPhase(roadmap: LearningRoadmap): any {
+  private getCurrentPhase(roadmap: LearningRoadmap): IPhase | undefined {
     if (!roadmap.progress?.currentPhase) {
-      return roadmap.phases[0]; // First phase if no progress
+      const firstPhase = roadmap.phases?.[0];
+      return firstPhase ? this.normalizePhaseToDB(firstPhase) : undefined;
     }
 
-    return roadmap.phases.find(phase => 
+    const phase = roadmap.phases?.find(phase => 
       phase.phaseId === roadmap.progress?.currentPhase
     );
+    return phase ? this.normalizePhaseToDB(phase) : undefined;
+  }
+
+  private normalizePhaseToDB(phase: any): IPhase {
+    return {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      phaseId: String(phase.phaseId || ''),
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+      phase: phase.phase,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      title: String(phase.title || ''),
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      description: String(phase.description || ''),
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      estimatedDuration: String(phase.estimatedDuration || ''),
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+      objectives: Array.isArray(phase.objectives) ? phase.objectives : [],
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      order: Number(phase.order) || 0,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+      prerequisites: Array.isArray(phase.prerequisites) ? phase.prerequisites : undefined,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+      milestones: (phase.milestones || []).map((m: any) => ({
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        milestoneId: String(m.milestoneId || ''),
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        title: String(m.title || ''),
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        description: String(m.description || ''),
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+        skills: Array.isArray(m.skills) ? m.skills.map((s: any) => ({
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+          skillName: String(s.skillName || ''),
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+          targetLevel: Number(s.targetLevel) || 0,
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+          currentLevel: s.currentLevel !== undefined ? Number(s.currentLevel) : undefined,
+        })) : [],
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+        tasks: (m.tasks || []).map((t: any) => ({
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+          taskId: String(t.taskId || ''),
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+          taskTitle: String(t.taskTitle || ''),
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+          estimatedHours: Number(t.estimatedHours) || 0,
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+          isRequired: Boolean(t.isRequired),
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+          order: Number(t.order) || 0,
+        })),
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+        completionCriteria: m.completionCriteria || undefined,
+      })),
+    };
   }
 
   private generateActivitiesForWeek(
-    phase: any,
+    phase: IPhase,
     availableHours: number,
-    progress?: any,
-  ): any[] {
-    const activities: Array<{
-      date: string;
-      type: string;
-      title: string;
-      description: string;
-      completed: boolean;
-      activityId?: string;
-      taskId?: string;
-      estimatedHours?: number;
-      priority?: string;
-      status?: string;
-    }> = [];
+    progress?: IProgress,
+  ): IWeeklyActivity[] {
+    const activities: IWeeklyActivity[] = [];
     let remainingHours = availableHours;
 
     // Get current milestone
-    const currentMilestone = phase.milestones.find((m: any) => {
+    const currentMilestone = phase.milestones.find(() => {
       const milestoneProgress = progress?.phaseProgress?.find(
-        (p: any) => p.phaseId === phase.phaseId
+        (p: PhaseProgress) => p.phaseId === phase.phaseId
       );
       return !milestoneProgress?.completedAt;
     }) || phase.milestones[0];
 
     // Add tasks from current milestone
-    currentMilestone.tasks.forEach((task: any, index: number) => {
+    currentMilestone.tasks.forEach((task: Task, index: number) => {
       if (remainingHours > 0 && task.estimatedHours <= remainingHours) {
         activities.push({
           date: new Date().toISOString().split('T')[0], // Current date in YYYY-MM-DD format
@@ -447,21 +575,21 @@ export class LearningRoadmapService {
     return activities;
   }
 
-  private getWeeklySkillFocus(phase: any, progress?: any): string[] {
+  private getWeeklySkillFocus(phase: IPhase): string[] {
     // Return skills that need attention based on current phase
     return phase.milestones
-      .flatMap((milestone: any) => milestone.skills)
-      .map((skill: any) => skill.skillName)
+      .flatMap((milestone: Milestone) => milestone.skills)
+      .map((skill: Skill) => skill.skillName)
       .slice(0, 3); // Focus on top 3 skills
   }
 
-  private calculateOverallProgress(progress: any): number {
+  private calculateOverallProgress(progress: IProgress): number {
     if (!progress.phaseProgress || progress.phaseProgress.length === 0) {
       return 0;
     }
 
     const totalProgress = progress.phaseProgress.reduce(
-      (sum: number, phase: any) => sum + phase.progress,
+      (sum: number, phase: PhaseProgress) => sum + phase.progress,
       0
     );
 
