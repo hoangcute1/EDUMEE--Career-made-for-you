@@ -161,9 +161,31 @@ export class AssessmentAnswerService {
     }
   }
 
+  // Xóa tất cả câu trả lời của user
+  async deleteAllByUser(userId: string): Promise<number> {
+    if (!Types.ObjectId.isValid(userId)) {
+      throw new BadRequestException('Invalid user ID');
+    }
 
+    const result = await this.assessmentAnswerModel.deleteMany({
+      userId: new Types.ObjectId(userId),
+    });
+    
+    return result.deletedCount;
+  }
 
   async bulkCreate(answers: CreateAssessmentAnswerDto[]): Promise<AssessmentAnswer[]> {
+    if (answers.length === 0) {
+      return [];
+    }
+
+    // Get userId from first answer (all answers should belong to same user)
+    const userId = answers[0].userId;
+    
+    // Delete all old answers for this user first
+    const deletedCount = await this.deleteAllByUser(userId);
+    console.log(`Deleted ${deletedCount} old answers for user ${userId}`);
+
     const answersWithObjectIds = answers.map(answer => ({
       ...answer,
       questionId: new Types.ObjectId(answer.questionId),

@@ -215,6 +215,12 @@ export class CareerFitResultService {
     try {
       this.logger.log(`Generating AI analysis for user ${userId}`);
       
+      // Delete old results for this user before creating new ones
+      const deleteResult = await this.careerFitResultModel.deleteMany({ 
+        userId: new Types.ObjectId(userId) 
+      });
+      this.logger.log(`Deleted ${deleteResult.deletedCount} old career fit results for user ${userId}`);
+      
       // Get AI analysis
       const analysis: AIAnalysisResult = await this.aiService.analyzePersonalityAndCareers(
         assessmentAnswers,
