@@ -1,255 +1,309 @@
 'use client';
 
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
 import { motion } from 'framer-motion';
-import {
-  ArrowRight,
-  Brain,
-  ChevronDown,
-  GitCompare,
-  GraduationCap,
-  Map,
-  MessageCircle,
-  Sparkles,
-  Star,
-  Target,
-  TrendingUp,
-} from 'lucide-react';
+import { CheckCircle2, Download, RotateCcw, Share2, TrendingUp } from 'lucide-react';
 import Link from 'next/link';
-import { useState } from 'react';
+import {
+  Bar,
+  BarChart,
+  Cell,
+  PolarAngleAxis,
+  PolarGrid,
+  Radar,
+  RadarChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
 
-const personalityResult = {
-  type: 'Nhà Khám Phá Sáng Tạo',
-  description:
-    'Bạn là người tò mò, yêu thích sáng tạo và không ngại thử nghiệm. Bạn phù hợp với những nghề đòi hỏi tư duy đột phá, giải quyết vấn đề phức tạp và làm việc với công nghệ tiên tiến.',
-  strengths: [
-    'Tư duy sáng tạo',
-    'Giải quyết vấn đề',
-    'Thích nghi nhanh',
-    'Tự học tốt',
-    'Công nghệ',
-  ],
-  traits: [
-    { name: 'Sáng tạo', value: 85 },
-    { name: 'Phân tích', value: 72 },
-    { name: 'Giao tiếp', value: 60 },
-    { name: 'Lãnh đạo', value: 55 },
-    { name: 'Kỷ luật', value: 68 },
-  ],
-  careers: [
-    { title: 'Frontend Developer', match: 95, icon: '💻', salary: '15-35 triệu' },
-    { title: 'UX/UI Designer', match: 88, icon: '🎨', salary: '12-30 triệu' },
-    { title: 'Product Manager', match: 82, icon: '📊', salary: '20-50 triệu' },
-    { title: 'Data Analyst', match: 78, icon: '📈', salary: '15-35 triệu' },
-    { title: 'AI Engineer', match: 75, icon: '🤖', salary: '25-60 triệu' },
-  ],
-};
-
-const primaryActions = [
+/* ─── Data ─── */
+const topCareers = [
   {
-    icon: Target,
-    label: 'Xem mô phỏng nghề theo từng level',
-    href: '/career-simulation',
-    color: 'bg-sky-light text-primary',
+    rank: 1,
+    icon: '💻',
+    title: 'Kỹ sư Phần mềm',
+    match: 92,
+    salary: '25–60 triệu/tháng',
+    growth: '+22% đến 2030',
+    skills: ['Lập trình', 'Problem Solving', 'Teamwork'],
+    insight:
+      'Tư duy logic cao, yêu thích xây dựng sản phẩm và khả năng học công nghệ mới tốt phù hợp với yêu cầu nghề.',
+    gradient: 'from-violet-500 to-purple-600',
+    btnClass: 'bg-violet-600 hover:bg-violet-700',
+    barColor: '#7c3aed',
   },
   {
-    icon: Map,
-    label: 'Xây lộ trình học 3–12 tháng',
-    href: '/learning-roadmap',
-    color: 'bg-mint-light text-mint',
+    rank: 2,
+    icon: '🤖',
+    title: 'Kỹ sư AI/Machine Learning',
+    match: 85,
+    salary: '30–80 triệu/tháng',
+    growth: '+45% đến 2030',
+    skills: ['Python', 'Data', 'Deep Learning'],
+    insight:
+      'Xu hướng AI bùng nổ, nền tảng toán học vững và khả năng tư duy trừu tượng của bạn phù hợp hoàn hảo.',
+    gradient: 'from-pink-500 to-rose-500',
+    btnClass: 'bg-pink-500 hover:bg-pink-600',
+    barColor: '#ec4899',
   },
   {
-    icon: GitCompare,
-    label: 'So sánh 2–3 nghề nghiệp',
-    href: '/career-compare',
-    color: 'bg-lavender text-secondary',
+    rank: 3,
+    icon: '📊',
+    title: 'Data Scientist',
+    match: 87,
+    salary: '20–50 triệu/tháng',
+    growth: '+35% đến 2030',
+    skills: ['Statistics', 'Python', 'SQL'],
+    insight: 'Kỹ năng phân tích dữ liệu và tư duy hệ thống là lợi thế lớn trong lĩnh vực này.',
+    gradient: 'from-blue-500 to-cyan-400',
+    btnClass: 'bg-blue-500 hover:bg-blue-600',
+    barColor: '#3b82f6',
   },
 ];
 
-const moreActions = [
-  {
-    icon: TrendingUp,
-    label: 'Xem hướng chuyên sâu & xu hướng',
-    href: '/specialization',
-    color: 'bg-gold-light text-gold',
-  },
-  {
-    icon: Brain,
-    label: 'Đánh giá kỹ năng hiện tại',
-    href: '/personality-test',
-    color: 'bg-coral-light text-coral',
-  },
-  {
-    icon: GraduationCap,
-    label: 'Kết nối mentor / gia sư',
-    href: '/mentor-matching',
-    color: 'bg-sky-light text-primary',
-  },
-  {
-    icon: MessageCircle,
-    label: 'Xem review ẩn danh từ cộng đồng',
-    href: '/community',
-    color: 'bg-mint-light text-mint',
-  },
+const radarData = [
+  { subject: 'Tư duy logic', A: 90 },
+  { subject: 'Sáng tạo', A: 75 },
+  { subject: 'Giao tiếp', A: 60 },
+  { subject: 'Kỹ thuật', A: 85 },
+  { subject: 'Lãnh đạo', A: 55 },
+  { subject: 'Cảm xúc xã hội', A: 65 },
 ];
 
-const container = {
-  hidden: {},
-  show: { transition: { staggerChildren: 0.08 } },
+const barData = [
+  { name: 'Kỹ sư phần mềm', score: 92, color: '#7c3aed' },
+  { name: 'Data Scientist', score: 87, color: '#7c3aed' },
+  { name: 'Product Manager', score: 74, color: '#7c3aed' },
+  { name: 'UX Designer', score: 68, color: '#06b6d4' },
+  { name: 'Kỹ sư AI/ML', score: 85, color: '#7c3aed' },
+];
+
+const personalityTraits = [
+  { name: 'INTJ – Nhà chiến lược', value: 85, desc: 'Độc lập, logic, dài hạn' },
+  { name: 'Analytical Thinking', value: 90, desc: 'Yêu thích phân tích dữ liệu' },
+  { name: 'Intrinsic Motivation', value: 78, desc: 'Tự thúc đẩy bản thân' },
+  { name: 'Tech Enthusiast', value: 92, desc: 'Đam mê công nghệ' },
+];
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.5 } },
 };
 
-const item = {
-  hidden: { opacity: 0, y: 15 },
-  show: { opacity: 1, y: 0 },
-};
-
+/* ─── Component ─── */
 const AssessmentResult = () => {
-  const [showMore, setShowMore] = useState(false);
-  const visibleActions = showMore ? [...primaryActions, ...moreActions] : primaryActions;
-
   return (
-    <div className="min-h-screen pb-20">
-      {/* Header */}
-      <div className="bg-gradient-hero text-primary-foreground">
-        <div className="container py-10">
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center"
-          >
-            <div className="bg-primary-foreground/20 mb-4 inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm">
-              <Sparkles className="h-4 w-4" /> Kết quả phân tích
-            </div>
-            <h1 className="font-display mb-2 text-3xl font-bold md:text-4xl">
-              Bạn là &ldquo;{personalityResult.type}&rdquo;
-            </h1>
-            <p className="text-primary-foreground/80 mx-auto max-w-2xl text-sm md:text-base">
-              {personalityResult.description}
-            </p>
-          </motion.div>
-        </div>
+    <div className="min-h-screen bg-gray-50 pb-20">
+      {/* ══ HEADER ══ */}
+      <div className="bg-white pt-10 pb-8 text-center">
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-green-100 px-4 py-1.5 text-sm font-medium text-green-700">
+            <CheckCircle2 className="h-4 w-4" /> Phân tích hoàn tất
+          </span>
+          <h1 className="font-display mt-4 text-4xl font-extrabold text-gray-900 md:text-5xl">
+            Kết quả phân tích của bạn
+          </h1>
+          <p className="mt-3 text-base text-gray-500">
+            AI đã phân tích 20 câu trả lời và so sánh với 50,000+ hồ sơ nghề nghiệp
+          </p>
+        </motion.div>
       </div>
 
-      <div className="container -mt-4 space-y-6">
-        {/* Strengths */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="glass-card rounded-2xl p-6"
-        >
-          <h2 className="font-display mb-4 flex items-center gap-2 text-lg font-semibold">
-            <Star className="text-gold h-5 w-5" /> Điểm mạnh của bạn
+      <div className="container space-y-8 py-8">
+        {/* ══ TOP 3 CAREERS ══ */}
+        <motion.section variants={fadeUp} initial="hidden" animate="show">
+          <h2 className="mb-5 flex items-center gap-2 text-xl font-bold text-gray-900">
+            🎯 Top 3 nghề phù hợp nhất
           </h2>
-          <div className="flex flex-wrap gap-2">
-            {personalityResult.strengths.map((s) => (
-              <Badge key={s} className="bg-primary/10 text-primary border-primary/20 px-3 py-1.5">
-                {s}
-              </Badge>
-            ))}
-          </div>
-        </motion.div>
+          <div className="grid gap-5 md:grid-cols-3">
+            {topCareers.map((career) => (
+              <div
+                key={career.title}
+                className="relative overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm"
+              >
+                {/* Gradient top bar */}
+                <div className={`h-2 w-full bg-linear-to-r ${career.gradient}`} />
 
-        {/* Personality traits */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="glass-card rounded-2xl p-6"
-        >
-          <h2 className="font-display mb-4 text-lg font-semibold">Phân bổ tính cách</h2>
-          <div className="space-y-4">
-            {personalityResult.traits.map((trait) => (
-              <div key={trait.name} className="space-y-1">
-                <div className="flex justify-between text-sm">
-                  <span className="font-medium">{trait.name}</span>
-                  <span className="text-muted-foreground">{trait.value}%</span>
+                {/* #1 badge */}
+                {career.rank === 1 && (
+                  <span className="absolute top-4 right-4 rounded-full bg-amber-400 px-2.5 py-0.5 text-xs font-bold text-white">
+                    #1 Tốt nhất
+                  </span>
+                )}
+
+                <div className="p-5">
+                  {/* Icon + title + match bar */}
+                  <div className="mb-3 flex items-center gap-3">
+                    <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-gray-100 text-2xl">
+                      {career.icon}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="font-bold text-gray-900">{career.title}</div>
+                      <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-gray-200">
+                        <div
+                          className={`h-full bg-linear-to-r ${career.gradient}`}
+                          style={{ width: `${career.match}%` }}
+                        />
+                      </div>
+                      <div className="mt-0.5 text-xs text-gray-500">{career.match}% match</div>
+                    </div>
+                  </div>
+
+                  {/* Salary & growth */}
+                  <div className="mb-3 space-y-1.5 text-sm text-gray-700">
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-bold text-green-500">$</span>
+                      {career.salary}
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <TrendingUp className="h-3.5 w-3.5 text-green-500" />
+                      {career.growth}
+                    </div>
+                  </div>
+
+                  {/* Skill tags */}
+                  <div className="mb-3 flex flex-wrap gap-1.5">
+                    {career.skills.map((s) => (
+                      <span
+                        key={s}
+                        className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs text-gray-600"
+                      >
+                        {s}
+                      </span>
+                    ))}
+                  </div>
+
+                  {/* AI insight */}
+                  <p className="mb-4 text-xs leading-relaxed text-gray-500">💡 {career.insight}</p>
+
+                  {/* CTA button */}
+                  <button
+                    className={`w-full rounded-xl py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 ${career.btnClass}`}
+                  >
+                    Xem lộ trình học &gt;
+                  </button>
                 </div>
-                <Progress value={trait.value} className="h-2.5" />
               </div>
             ))}
           </div>
-        </motion.div>
+        </motion.section>
 
-        {/* Career matches */}
+        {/* ══ CHARTS ══ */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="glass-card rounded-2xl p-6"
+          variants={fadeUp}
+          initial="hidden"
+          animate="show"
+          className="grid gap-5 md:grid-cols-2"
         >
-          <h2 className="font-display mb-4 text-lg font-semibold">Nghề nghiệp phù hợp</h2>
-          <div className="space-y-3">
-            {personalityResult.careers.map((career, i) => (
-              <motion.div
-                key={career.title}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.4 + i * 0.05 }}
-                className="bg-muted/50 hover:bg-muted flex items-center gap-4 rounded-xl p-4 transition-colors"
-              >
-                <span className="text-2xl">{career.icon}</span>
-                <div className="min-w-0 flex-1">
-                  <div className="font-semibold">{career.title}</div>
-                  <div className="text-muted-foreground text-xs">
-                    Thu nhập: {career.salary}/tháng
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-primary text-sm font-bold">{career.match}%</div>
-                  <div className="text-muted-foreground text-xs">phù hợp</div>
-                </div>
-              </motion.div>
-            ))}
+          {/* Radar – Biểu đồ năng lực */}
+          <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+            <h3 className="mb-4 font-bold text-gray-900">Biểu đồ năng lực</h3>
+            <ResponsiveContainer width="100%" height={260}>
+              <RadarChart data={radarData}>
+                <PolarGrid stroke="#e5e7eb" />
+                <PolarAngleAxis dataKey="subject" tick={{ fontSize: 11, fill: '#6b7280' }} />
+                <Radar
+                  name="Năng lực"
+                  dataKey="A"
+                  stroke="#7c3aed"
+                  fill="#7c3aed"
+                  fillOpacity={0.25}
+                />
+              </RadarChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Bar – Điểm phù hợp theo nghề */}
+          <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+            <h3 className="mb-4 font-bold text-gray-900">Điểm phù hợp theo nghề</h3>
+            <ResponsiveContainer width="100%" height={260}>
+              <BarChart data={barData} layout="vertical" margin={{ left: 8, right: 16 }}>
+                <XAxis
+                  type="number"
+                  domain={[0, 100]}
+                  tick={{ fontSize: 11, fill: '#6b7280' }}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <YAxis
+                  type="category"
+                  dataKey="name"
+                  tick={{ fontSize: 11, fill: '#6b7280' }}
+                  width={100}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <Tooltip
+                  formatter={(v) => [`${v}%`, 'Điểm phù hợp']}
+                  contentStyle={{ borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 12 }}
+                />
+                <Bar dataKey="score" radius={[0, 6, 6, 0]} barSize={16}>
+                  {barData.map((entry, i) => (
+                    <Cell key={i} fill={entry.color} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         </motion.div>
 
-        {/* Next actions */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-          className="glass-card rounded-2xl p-6"
-        >
-          <h2 className="font-display mb-2 text-lg font-semibold">Bạn muốn làm gì tiếp theo?</h2>
-          <p className="text-muted-foreground mb-4 text-sm">
-            AI sẽ tạo nội dung cá nhân hóa dựa trên hồ sơ của bạn
-          </p>
-          <motion.div
-            variants={container}
-            initial="hidden"
-            animate="show"
-            className="grid gap-3 sm:grid-cols-2"
-          >
-            {visibleActions.map((action) => (
-              <motion.div key={action.href} variants={item}>
-                <Link href={action.href}>
-                  <div className="border-border hover:border-primary/30 hover:shadow-soft bg-card group flex cursor-pointer items-center gap-3 rounded-xl border p-4 transition-all">
-                    <div
-                      className={`h-10 w-10 rounded-xl ${action.color} flex flex-shrink-0 items-center justify-center`}
-                    >
-                      <action.icon className="h-5 w-5" />
-                    </div>
-                    <span className="flex-1 text-sm font-medium">{action.label}</span>
-                    <ArrowRight className="text-muted-foreground group-hover:text-primary h-4 w-4 transition-colors" />
-                  </div>
-                </Link>
-              </motion.div>
+        {/* ══ PERSONALITY PROFILE ══ */}
+        <motion.section variants={fadeUp} initial="hidden" animate="show">
+          <h2 className="mb-5 flex items-center gap-2 text-xl font-bold text-gray-900">
+            🧠 Hồ sơ tính cách của bạn
+          </h2>
+          <div className="grid gap-5 sm:grid-cols-2">
+            {personalityTraits.map((trait) => (
+              <div
+                key={trait.name}
+                className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"
+              >
+                <div className="mb-1 flex items-center justify-between">
+                  <span className="text-sm font-semibold text-gray-900">{trait.name}</span>
+                  <span className="text-sm font-bold text-violet-600">{trait.value}%</span>
+                </div>
+                <div className="mb-2 h-2 w-full overflow-hidden rounded-full bg-gray-200">
+                  <div
+                    className="h-full rounded-full bg-linear-to-r from-violet-500 to-purple-400"
+                    style={{ width: `${trait.value}%` }}
+                  />
+                </div>
+                <p className="text-xs text-gray-500">{trait.desc}</p>
+              </div>
             ))}
-          </motion.div>
-          {!showMore && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-muted-foreground mt-3 w-full gap-1"
-              onClick={() => setShowMore(true)}
-            >
-              Xem thêm lựa chọn <ChevronDown className="h-4 w-4" />
+          </div>
+        </motion.section>
+
+        {/* ══ ACTIONS ══ */}
+        <motion.section variants={fadeUp} initial="hidden" animate="show" className="text-center">
+          <div className="flex flex-wrap justify-center gap-3">
+            <Link href="/learning-roadmap">
+              <Button className="gap-2 rounded-full bg-violet-600 px-6 text-white hover:bg-violet-700">
+                🎁 Xem lộ trình học tập
+              </Button>
+            </Link>
+            <Link href="/careers">
+              <Button variant="outline" className="gap-2 rounded-full px-6">
+                → Khám phá thêm nghề
+              </Button>
+            </Link>
+            <Button variant="outline" className="gap-2 rounded-full px-6">
+              <Download className="h-4 w-4" /> Tải kết quả PDF
             </Button>
-          )}
-        </motion.div>
+            <Button variant="outline" className="gap-2 rounded-full px-6">
+              <Share2 className="h-4 w-4" /> Chia sẻ
+            </Button>
+          </div>
+          <div className="mt-4">
+            <Link href="/personality-test">
+              <Button variant="ghost" className="gap-1.5 text-sm text-gray-400">
+                <RotateCcw className="h-3.5 w-3.5" /> Làm lại bài đánh giá
+              </Button>
+            </Link>
+          </div>
+        </motion.section>
       </div>
     </div>
   );

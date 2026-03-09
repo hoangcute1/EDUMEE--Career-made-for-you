@@ -46,6 +46,11 @@ const scaleIn = {
 };
 
 /* ─── Data ─── */
+const stats = [
+  { value: '10,000+', label: 'Học sinh đã sử dụng', icon: Users },
+  { value: '4.8/5', label: 'Đánh giá trung bình', icon: Star },
+  { value: '50+', label: 'Ngành nghề phân tích', icon: BookOpen },
+];
 const steps = [
   {
     num: '01',
@@ -182,12 +187,6 @@ const testimonials = [
     text: '"Lộ trình cá nhân hóa giúp mình biết cần học gì, trong bao lâu. Cảm giác như có mentor riêng vậy!"',
     avatar: '👩‍💼',
   },
-];
-
-const stats = [
-  { value: '10,000+', label: 'Học sinh đã sử dụng', icon: Users },
-  { value: '4.8/5', label: 'Đánh giá trung bình', icon: Star },
-  { value: '50+', label: 'Ngành nghề phân tích', icon: BookOpen },
 ];
 
 /* ─── Component ─── */
@@ -647,32 +646,89 @@ const Landing = () => {
       </section>
 
       {/* ═══ FOOTER ═══ */}
-      <footer className="border-border border-t py-10">
+      <footer className="border-border border-t py-12">
         <div className="container">
-          <div className="flex flex-col items-center justify-between gap-6 md:flex-row">
-            <div className="font-display flex items-center gap-2 text-lg font-bold">
-              <div className="bg-gradient-hero flex h-7 w-7 items-center justify-center rounded-lg">
-                <Sparkles className="h-3.5 w-3.5 text-white" />
+          {/* Top row: logo + description + link columns */}
+          <div className="mb-10 grid gap-8 sm:grid-cols-2 md:grid-cols-4">
+            {/* Brand */}
+            <div className="sm:col-span-2">
+              <div className="font-display mb-3 flex items-center gap-2 text-lg font-bold">
+                <div className="bg-gradient-hero flex h-8 w-8 items-center justify-center rounded-lg">
+                  <Sparkles className="h-4 w-4 text-white" />
+                </div>
+                EDUMEE
               </div>
-              EDUMEE
+              <p className="text-muted-foreground max-w-xs text-sm leading-relaxed">
+                Nền tảng AI tư vấn nghề nghiệp hàng đầu Việt Nam, giúp học sinh và sinh viên tìm con
+                đường sự nghiệp phù hợp nhất.
+              </p>
             </div>
-            <div className="text-muted-foreground flex flex-wrap items-center gap-6 text-sm">
-              <Link href="/about" className="hover:text-foreground transition-colors">
-                Giới thiệu
-              </Link>
-              <Link href="/privacy" className="hover:text-foreground transition-colors">
-                Chính sách bảo mật
-              </Link>
-              <Link href="/terms" className="hover:text-foreground transition-colors">
-                Điều khoản
-              </Link>
-              <Link href="/contact" className="hover:text-foreground transition-colors">
-                Liên hệ
-              </Link>
+
+            {/* Tính năng */}
+            <div>
+              <h4 className="mb-3 text-sm font-semibold">Tính năng</h4>
+              <ul className="text-muted-foreground space-y-2 text-sm">
+                <li>
+                  <Link
+                    href="/assessment-result"
+                    className="hover:text-foreground transition-colors"
+                  >
+                    Đánh giá nghề nghiệp
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/careers" className="hover:text-foreground transition-colors">
+                    Khám phá ngành
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/career-compare" className="hover:text-foreground transition-colors">
+                    So sánh nghề
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/learning-roadmap"
+                    className="hover:text-foreground transition-colors"
+                  >
+                    Lộ trình học tập
+                  </Link>
+                </li>
+              </ul>
             </div>
-            <p className="text-muted-foreground text-sm">
-              © 2026 EDUMEE. Người bạn đồng hành sự nghiệp.
-            </p>
+
+            {/* Hỗ trợ */}
+            <div>
+              <h4 className="mb-3 text-sm font-semibold">Hỗ trợ</h4>
+              <ul className="text-muted-foreground space-y-2 text-sm">
+                <li>
+                  <Link href="/community" className="hover:text-foreground transition-colors">
+                    Cộng đồng
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/mentor-matching" className="hover:text-foreground transition-colors">
+                    Mentor
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/blog" className="hover:text-foreground transition-colors">
+                    Blog
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/contact" className="hover:text-foreground transition-colors">
+                    Liên hệ
+                  </Link>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Bottom row: copyright */}
+          <div className="border-border flex flex-col items-center justify-between gap-2 border-t pt-6 text-sm sm:flex-row">
+            <p className="text-muted-foreground">© 2026 EDUMEE. Tất cả quyền được bảo lưu.</p>
+            <p className="text-muted-foreground">Made with ❤️ for Vietnamese students</p>
           </div>
         </div>
       </footer>
