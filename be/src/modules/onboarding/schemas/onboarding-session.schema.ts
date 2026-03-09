@@ -99,7 +99,7 @@ export class OnboardingSession {
   };
 
   // Onboarding step progress
-  @Prop({ required: true })
+  @Prop({ required: true, type: [Object] })
   stepProgress!: {
     stepId: OnboardingStep;
     status: 'not_reached' | 'current' | 'completed' | 'skipped';

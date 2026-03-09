@@ -1,20 +1,39 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { CareerFitResult, CareerFitResultDocument } from '../schemas/career-fit-result.schema';
 import { CreateCareerFitResultDto, UpdateCareerFitResultDto } from '../dto';
+import { AIService } from '../../../common/services/ai.service';
+import { AssessmentAnswerData, AIAnalysisResult } from '../../../common/interfaces/ai-analysis.interface';
+import { AssessmentAnswerService } from './assessment-answer.service';
+
+interface QuestionData {
+  _id?: Types.ObjectId | string;
+  questionText?: string;
+  dimension?: string;
+}
+
+interface Career {
+  _id?: string;
+  title: string;
+  category?: string;
+  industry?: string;
+}
 
 @Injectable()
 export class CareerFitResultService {
+  private readonly logger = new Logger(CareerFitResultService.name);
+
   constructor(
     @InjectModel(CareerFitResult.name)
     private readonly careerFitResultModel: Model<CareerFitResultDocument>,
+    private readonly aiService: AIService,
+    private readonly assessmentAnswerService: AssessmentAnswerService,
   ) {}
 
   async create(createDto: CreateCareerFitResultDto): Promise<CareerFitResult> {
     const result = new this.careerFitResultModel({
       ...createDto,
-      sessionId: new Types.ObjectId(createDto.sessionId),
       userId: new Types.ObjectId(createDto.userId),
       careerId: new Types.ObjectId(createDto.careerId),
     });
@@ -33,7 +52,6 @@ export class CareerFitResultService {
     const [data, total] = await Promise.all([
       this.careerFitResultModel
         .find(query)
-        .populate('sessionId', 'title type status')
         .populate('userId', 'email firstName lastName')
         .populate('careerId', 'title category industry')
         .sort({ overallFitScore: -1, createdAt: -1 })
@@ -53,7 +71,6 @@ export class CareerFitResultService {
 
     const result = await this.careerFitResultModel
       .findById(id)
-      .populate('sessionId', 'title type status')
       .populate('userId', 'email firstName lastName')
       .populate('careerId', 'title category industry')
       .exec();
@@ -65,17 +82,18 @@ export class CareerFitResultService {
     return result;
   }
 
-  async findBySession(sessionId: string): Promise<CareerFitResult[]> {
-    if (!Types.ObjectId.isValid(sessionId)) {
-      throw new BadRequestException('Invalid session ID');
-    }
+  // Deprecated: Sessions are removed from the system
+  // async findBySession(sessionId: string): Promise<CareerFitResult[]> {
+  //   if (!Types.ObjectId.isValid(sessionId)) {
+  //     throw new BadRequestException('Invalid session ID');
+  //   }
 
-    return this.careerFitResultModel
-      .find({ sessionId: new Types.ObjectId(sessionId) })
-      .populate('careerId', 'title category industry')
-      .sort({ overallFitScore: -1 })
-      .exec();
-  }
+  //   return this.careerFitResultModel
+  //     .find({ sessionId: new Types.ObjectId(sessionId) })
+  //     .populate('careerId', 'title category industry')
+  //     .sort({ overallFitScore: -1 })
+  //     .exec();
+  // }
 
   async findByUser(userId: string, limit?: number): Promise<CareerFitResult[]> {
     if (!Types.ObjectId.isValid(userId)) {
@@ -84,7 +102,7 @@ export class CareerFitResultService {
 
     let query = this.careerFitResultModel
       .find({ userId: new Types.ObjectId(userId) })
-      .populate('sessionId', 'title type')
+      .populate('userId', 'email firstName lastName')
       .populate('careerId', 'title category industry')
       .sort({ overallFitScore: -1, createdAt: -1 });
 
@@ -103,7 +121,7 @@ export class CareerFitResultService {
     return this.careerFitResultModel
       .find({ careerId: new Types.ObjectId(careerId) })
       .populate('userId', 'email firstName lastName')
-      .populate('sessionId', 'title type')
+      .populate('careerId', 'title category industry')
       .sort({ overallFitScore: -1 })
       .exec();
   }
@@ -128,7 +146,7 @@ export class CareerFitResultService {
 
     const result = await this.careerFitResultModel
       .findByIdAndUpdate(id, updateDto, { new: true, runValidators: true })
-      .populate('sessionId', 'title type')
+
       .populate('userId', 'email firstName lastName')
       .populate('careerId', 'title category industry')
       .exec();
@@ -186,6 +204,140 @@ export class CareerFitResultService {
     };
   }
 
+  /**
+   * Generate AI-powered career fit analysis from assessment answers
+   */
+  async generateAIAnalysis(
+    userId: string,
+    assessmentAnswers: AssessmentAnswerData[],
+    availableCareers: Career[] = []
+  ): Promise<CareerFitResult[]> {
+    try {
+      this.logger.log(`Generating AI analysis for user ${userId}`);
+      
+      // Delete old results for this user before creating new ones
+      const deleteResult = await this.careerFitResultModel.deleteMany({ 
+        userId: new Types.ObjectId(userId) 
+      });
+      this.logger.log(`Deleted ${deleteResult.deletedCount} old career fit results for user ${userId}`);
+      
+      // Get AI analysis
+      const analysis: AIAnalysisResult = await this.aiService.analyzePersonalityAndCareers(
+        assessmentAnswers,
+        availableCareers
+      );
+
+      // Convert AI recommendations to CareerFitResult documents
+      const careerFitResults: CareerFitResult[] = [];
+
+      for (const recommendation of analysis.careerRecommendations) {
+        // Validate careerId - only convert if it's a valid ObjectId string
+        let careerId = null;
+        if (recommendation.careerId && Types.ObjectId.isValid(recommendation.careerId)) {
+          careerId = new Types.ObjectId(recommendation.careerId);
+        }
+
+        const careerFitData = {
+          userId: new Types.ObjectId(userId),
+          careerId,
+          careerTitle: recommendation.careerTitle,
+          overallFitScore: recommendation.fitScore,
+          
+          // Personality match scores
+          personalityMatch: {
+            big5Score: recommendation.personalityMatch?.bigFiveAlignment,
+            riasecScore: recommendation.personalityMatch?.riasecAlignment,
+            overallPersonalityFit: recommendation.personalityMatch?.overallFit,
+          },
+          
+          // Dimension scores from AI analysis
+          dimensionScores: {
+            ...analysis.personalityAnalysis.bigFiveScores,
+            ...analysis.personalityAnalysis.riasecScores,
+          },
+          
+          // Strengths and development areas
+          strengths: recommendation.reasons,
+          developmentAreas: recommendation.potentialChallenges,
+          improvementSuggestions: recommendation.developmentSuggestions,
+          
+          // AI insights
+          aiExplanation: analysis.explanation,
+          confidence: analysis.confidence,
+          
+          // Personality profile
+          personalityProfile: analysis.personalityAnalysis.personalityProfile,
+        };
+
+        // Save to database
+        const result = new this.careerFitResultModel(careerFitData);
+        const savedResult = await result.save();
+        careerFitResults.push(savedResult);
+      }
+
+      this.logger.log(`Generated ${careerFitResults.length} career recommendations for user ${userId}`);
+      return careerFitResults;
+      
+    } catch (error) {
+      this.logger.error('Failed to generate AI analysis:', error);
+      throw new BadRequestException('Failed to generate career analysis');
+    }
+  }
+
+  /**
+   * Generate AI-powered career fit analysis by auto-fetching user's answers from database
+   */
+  async generateAnalysisFromUserAnswers(
+    userId: string,
+    availableCareers: Career[] = []
+  ): Promise<CareerFitResult[]> {
+    try {
+      this.logger.log(`Fetching assessment answers for user ${userId}`);
+      
+      // Fetch user's answers from database
+      const userAnswers = await this.assessmentAnswerService.findByUser(userId);
+      
+      if (!userAnswers || userAnswers.length === 0) {
+        throw new BadRequestException('No assessment answers found for this user. Please complete the assessment first.');
+      }
+
+      this.logger.log(`Found ${userAnswers.length} answers for user ${userId}`);
+
+      // Transform answers to AssessmentAnswerData format
+      const assessmentAnswers: AssessmentAnswerData[] = userAnswers.map(answer => {
+        const question = answer.questionId as QuestionData; // Populated question data
+        return {
+          questionId: typeof question === 'object' ? (question._id?.toString() ?? '') : (answer.questionId?.toString() ?? ''),
+          answer: answer.answer,
+          questionText: question?.questionText ?? '',
+          dimension: question?.dimension ?? '',
+        };
+      });
+
+      // Use the existing generateAIAnalysis method
+      return this.generateAIAnalysis(userId, assessmentAnswers, availableCareers);
+      
+    } catch (error) {
+      this.logger.error('Failed to generate analysis from user answers:', error);
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new BadRequestException('Failed to generate career analysis from user answers');
+    }
+  }
+
+  /**
+   * Get enhanced career insights using AI
+   */
+  async getCareerInsight(careerTitle: string, personalityTraits: string[]): Promise<string> {
+    try {
+      return await this.aiService.generateCareerInsight(careerTitle, personalityTraits);
+    } catch (error) {
+      this.logger.error('Failed to get career insight:', error);
+      return `${careerTitle} aligns well with your personality profile. Consider exploring this career path further.`;
+    }
+  }
+
   async getStatistics(): Promise<any> {
     const stats = await this.careerFitResultModel.aggregate([
       {
@@ -240,11 +392,6 @@ export class CareerFitResultService {
 
   private buildQuery(filters: Partial<CareerFitResult>): Record<string, unknown> {
     const query: Record<string, unknown> = {};
-
-    if (filters.sessionId) {
-      const sessionId = filters.sessionId as unknown as string;
-      query.sessionId = Types.ObjectId.createFromHexString(sessionId);
-    }
 
     if (filters.userId) {
       const userId = filters.userId as unknown as string;

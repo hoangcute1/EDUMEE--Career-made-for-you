@@ -1,30 +1,34 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
+import { JwtModule } from '@nestjs/jwt';
 import { MongooseModule } from '@nestjs/mongoose';
-import { User, UserSchema } from './schemas/user.schema';
+
+import { MailModule } from '../../common/mail/mail.module';
 import { UserProfile, UserProfileSchema } from './schemas/user-profile.schema';
-import { UsersController } from './users.controller';
-import { UsersService } from './users.service';
+import { User, UserSchema } from './schemas/user.schema';
 import { UserProfileController } from './user-profile.controller';
 import { UserProfileService } from './user-profile.service';
+import { UsersController } from './users.controller';
+import { UsersService } from './users.service';
 
 @Module({
   imports: [
+    //Khai báo Schema để UsersService có thể gọi this.userModel
     MongooseModule.forFeature([
       { name: User.name, schema: UserSchema },
       { name: UserProfile.name, schema: UserProfileSchema },
     ]),
+
+    // JwtModule để UsersService dùng được this.jwtService.signAsync
+    JwtModule.register({}),
+
+    // 3. ConfigModule để dùng được this.configService lấy biến môi trường từ file .env
+    ConfigModule,
+    MailModule,
   ],
-  controllers: [
-    UsersController,
-    UserProfileController,
-  ],
-  providers: [
-    UsersService, 
-    UserProfileService,
-  ],
-  exports: [
-    UsersService,
-    UserProfileService,
-  ],
+  controllers: [UsersController, UserProfileController],
+  providers: [UsersService, UserProfileService],
+  // export UsersService thig AuthService mới có thể gọi nó
+  exports: [UsersService, UserProfileService],
 })
 export class UsersModule {}

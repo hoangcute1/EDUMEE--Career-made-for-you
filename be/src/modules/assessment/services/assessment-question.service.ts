@@ -1,7 +1,7 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { AssessmentQuestion, AssessmentQuestionDocument, QuestionType } from '../schemas/assessment-question.schema';
+import { AssessmentQuestion, AssessmentQuestionDocument, QuestionType, AssessmentDimension } from '../schemas/assessment-question.schema';
 import { CreateAssessmentQuestionDto, UpdateAssessmentQuestionDto } from '../dto';
 
 @Injectable()
@@ -14,7 +14,6 @@ export class AssessmentQuestionService {
   async create(createDto: CreateAssessmentQuestionDto): Promise<AssessmentQuestion> {
     const question = new this.assessmentQuestionModel({
       ...createDto,
-      sessionId: new Types.ObjectId(createDto.sessionId),
     });
     return question.save();
   }
@@ -23,150 +22,114 @@ export class AssessmentQuestionService {
     page = 1,
     limit = 10,
     filters: Partial<AssessmentQuestion> = {},
-  ): Promise<{ data: AssessmentQuestion[]; total: number; page: number; limit: number }> {
+  ): Promise<{ questions: AssessmentQuestion[]; total: number }> {
     const skip = (page - 1) * limit;
     
-    const query = this.buildQuery(filters);
-    
-    const [data, total] = await Promise.all([
+    const [questions, total] = await Promise.all([
       this.assessmentQuestionModel
-        .find(query)
-        .populate('sessionId', 'title type status')
-        .sort({ order: 1, createdAt: 1 })
+        .find(filters)
+        .sort({ orderIndex: 1, createdAt: 1 })
         .skip(skip)
         .limit(limit)
         .exec(),
-      this.assessmentQuestionModel.countDocuments(query),
+      this.assessmentQuestionModel.countDocuments(filters),
     ]);
 
-    return { data, total, page, limit };
+    return { questions, total };
   }
 
-  async findOne(id: string): Promise<AssessmentQuestion> {
+  async findById(id: string): Promise<AssessmentQuestion> {
     if (!Types.ObjectId.isValid(id)) {
-      throw new BadRequestException('Invalid question ID');
+      throw new NotFoundException('Invalid question ID');
     }
 
-    const question = await this.assessmentQuestionModel
-      .findById(id)
-      .populate('sessionId', 'title type status')
-      .exec();
-
+    const question = await this.assessmentQuestionModel.findById(id).exec();
     if (!question) {
-      throw new NotFoundException('Assessment question not found');
+      throw new NotFoundException('Question not found');
     }
 
     return question;
   }
 
-  async findBySession(sessionId: string): Promise<AssessmentQuestion[]> {
-    if (!Types.ObjectId.isValid(sessionId)) {
-      throw new BadRequestException('Invalid session ID');
-    }
-
+  async findByType(type: QuestionType): Promise<AssessmentQuestion[]> {
     return this.assessmentQuestionModel
-      .find({ sessionId: new Types.ObjectId(sessionId) })
-      .sort({ order: 1, createdAt: 1 })
+      .find({ questionType: type })
+      .sort({ orderIndex: 1 })
       .exec();
   }
 
-  async findByType(type: QuestionType, sessionId?: string): Promise<AssessmentQuestion[]> {
-    const query: Record<string, unknown> = { type };
-    
-    if (sessionId) {
-      if (!Types.ObjectId.isValid(sessionId)) {
-        throw new BadRequestException('Invalid session ID');
-      }
-      query.sessionId = new Types.ObjectId(sessionId);
-    }
-
+  async findByDimension(dimension: AssessmentDimension): Promise<AssessmentQuestion[]> {
     return this.assessmentQuestionModel
-      .find(query)
-      .sort({ order: 1, createdAt: 1 })
+      .find({ dimension })
+      .sort({ orderIndex: 1 })
       .exec();
   }
 
   async update(id: string, updateDto: UpdateAssessmentQuestionDto): Promise<AssessmentQuestion> {
     if (!Types.ObjectId.isValid(id)) {
-      throw new BadRequestException('Invalid question ID');
+      throw new NotFoundException('Invalid question ID');
     }
 
     const question = await this.assessmentQuestionModel
-      .findByIdAndUpdate(id, updateDto, { new: true, runValidators: true })
-      .populate('sessionId', 'title type status')
+      .findByIdAndUpdate(id, { $set: updateDto }, { new: true, runValidators: true })
       .exec();
 
     if (!question) {
-      throw new NotFoundException('Assessment question not found');
+      throw new NotFoundException('Question not found');
     }
 
     return question;
   }
 
-  async remove(id: string): Promise<void> {
+  async delete(id: string): Promise<void> {
     if (!Types.ObjectId.isValid(id)) {
-      throw new BadRequestException('Invalid question ID');
+      throw new NotFoundException('Invalid question ID');
     }
 
     const result = await this.assessmentQuestionModel.findByIdAndDelete(id).exec();
-    
     if (!result) {
-      throw new NotFoundException('Assessment question not found');
+      throw new NotFoundException('Question not found');
     }
   }
 
-  async reorderQuestions(sessionId: string, questionIds: string[]): Promise<AssessmentQuestion[]> {
-    if (!Types.ObjectId.isValid(sessionId)) {
-      throw new BadRequestException('Invalid session ID');
-    }
-
-    const updates = questionIds.map((questionId, index) => 
-      this.assessmentQuestionModel.findByIdAndUpdate(
-        questionId,
-        { order: index + 1 },
-        { new: true }
-      ).exec()
-    );
-
-    return Promise.all(updates.map(async (updatePromise) => {
-      const result = await updatePromise;
-      return result || null;
-    })).then(results => results.filter(result => result !== null)) as Promise<AssessmentQuestion[]>;
-  }
-
-  async bulkCreate(sessionId: string, questions: CreateAssessmentQuestionDto[]): Promise<AssessmentQuestion[]> {
-    if (!Types.ObjectId.isValid(sessionId)) {
-      throw new BadRequestException('Invalid session ID');
-    }
-
-    const questionsWithSessionId = questions.map((q, index) => ({
+  async bulkCreate(questions: CreateAssessmentQuestionDto[]): Promise<AssessmentQuestion[]> {
+    const questionsWithOrder = questions.map((q, index) => ({
       ...q,
-      sessionId: new Types.ObjectId(sessionId),
-      order: index + 1,
+      orderIndex: q.orderIndex || index + 1,
     }));
 
-    return this.assessmentQuestionModel.insertMany(questionsWithSessionId) as any as Promise<AssessmentQuestion[]>;
+    return this.assessmentQuestionModel.insertMany(questionsWithOrder) as any as Promise<AssessmentQuestion[]>;
   }
 
-  private buildQuery(filters: Partial<AssessmentQuestion>): Record<string, unknown> {
-    const query: Record<string, unknown> = {};
+  async getStats(): Promise<{
+    totalQuestions: number;
+    typeDistribution: Record<string, number>;
+    dimensionDistribution: Record<string, number>;
+  }> {
+    const [total, typeStats, dimensionStats] = await Promise.all([
+      this.assessmentQuestionModel.countDocuments(),
+      this.assessmentQuestionModel.aggregate([
+        { $group: { _id: '$questionType', count: { $sum: 1 } } }
+      ]).exec() as Promise<{ _id: string; count: number }[]>,
+      this.assessmentQuestionModel.aggregate([
+        { $group: { _id: '$dimension', count: { $sum: 1 } } }
+      ]).exec() as Promise<{ _id: string; count: number }[]>
+    ]);
 
-    if (filters.sessionId) {
-      query.sessionId = filters.sessionId instanceof Types.ObjectId ? filters.sessionId : new Types.ObjectId(filters.sessionId as unknown as string);
-    }
+    const typeDistribution: Record<string, number> = typeStats.reduce((acc, item) => {
+      acc[item._id] = item.count;
+      return acc;
+    }, {} as Record<string, number>);
 
-    if (filters.questionType) {
-      query.questionType = filters.questionType;
-    }
+    const dimensionDistribution: Record<string, number> = dimensionStats.reduce((acc, item) => {
+      acc[item._id] = item.count;
+      return acc;
+    }, {} as Record<string, number>);
 
-    if (filters.dimension) {
-      query.dimension = filters.dimension;
-    }
-
-    if (filters.dimension) {
-      query.dimension = filters.dimension;
-    }
-
-    return query;
+    return {
+      totalQuestions: total,
+      typeDistribution,
+      dimensionDistribution,
+    };
   }
 }

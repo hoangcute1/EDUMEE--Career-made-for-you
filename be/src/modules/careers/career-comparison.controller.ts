@@ -39,7 +39,7 @@ interface AuthUser {
 @ApiTags('Career Comparisons')
 @Controller('career-comparisons')
 @UseGuards(JwtAuthGuard)
-@ApiBearerAuth()
+@ApiBearerAuth('JWT-auth')
 export class CareerComparisonController {
   constructor(
     private readonly careerComparisonService: CareerComparisonService,

@@ -21,29 +21,63 @@ import {
 } from '@nestjs/swagger';
 import { Types } from 'mongoose';
 import { AssessmentAnswerService } from '../services/assessment-answer.service';
-import { CreateAssessmentAnswerDto, UpdateAssessmentAnswerDto } from '../dto';
+import { UpdateAssessmentAnswerDto, BulkAnswerDto } from '../dto';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 
 interface CurrentUserPayload {
-  id: string;
+  userId: string;
+  email: string;
+  role: string;
 }
 
 @ApiTags('Assessment Answers')
-@ApiBearerAuth()
+@ApiBearerAuth('JWT-auth')
 @UseGuards(JwtAuthGuard)
 @Controller('assessment-answers')
 export class AssessmentAnswerController {
   constructor(private readonly assessmentAnswerService: AssessmentAnswerService) {}
 
   @Post()
-  @ApiOperation({ summary: 'Create a new assessment answer' })
+  @ApiOperation({ summary: 'Answer a question (create new or update existing)' })
+  @ApiResponse({ 
+    status: 201, 
+    description: 'Assessment answer saved successfully' 
+  })
+  @ApiResponse({ 
+    status: 409, 
+    description: 'Answer already exists for this question and user' 
+  })
+  async answerQuestion(
+    @Body() createDto: BulkAnswerDto,
+    @CurrentUser() user: CurrentUserPayload,
+  ) {
+    const answerWithUser = {
+      ...createDto,
+      userId: user.userId,
+    };
+    return this.assessmentAnswerService.answerQuestion(answerWithUser);
+  }
+
+  @Post('force-create')
+  @ApiOperation({ summary: 'Force create a new assessment answer (may cause conflict)' })
   @ApiResponse({ 
     status: 201, 
     description: 'Assessment answer created successfully' 
   })
-  async create(@Body() createDto: CreateAssessmentAnswerDto) {
-    return this.assessmentAnswerService.create(createDto);
+  @ApiResponse({ 
+    status: 409, 
+    description: 'User đã trả lời câu hỏi này rồi' 
+  })
+  async create(
+    @Body() createDto: BulkAnswerDto,
+    @CurrentUser() user: CurrentUserPayload,
+  ) {
+    const answerWithUser = {
+      ...createDto,
+      userId: user.userId,
+    };
+    return this.assessmentAnswerService.create(answerWithUser);
   }
 
   @Post('bulk')
@@ -52,8 +86,24 @@ export class AssessmentAnswerController {
     status: 201, 
     description: 'Assessment answers created successfully' 
   })
-  async bulkCreate(@Body() answers: CreateAssessmentAnswerDto[]) {
-    return this.assessmentAnswerService.bulkCreate(answers);
+  async bulkCreate(
+    @Body() answers: BulkAnswerDto[],
+    @CurrentUser() user: CurrentUserPayload,
+  ) {
+    // DEBUG: Log user object to verify JWT payload
+    console.log('Current user from JWT:', JSON.stringify(user));
+    console.log('User ID from JWT:', user?.userId);
+    
+    if (!user?.userId) {
+      throw new Error('User ID not found in JWT token');
+    }
+    
+    // Inject userId from token to all answers
+    const answersWithUser = answers.map(answer => ({
+      ...answer,
+      userId: user.userId,
+    }));
+    return this.assessmentAnswerService.bulkCreate(answersWithUser);
   }
 
   @Get()
@@ -86,55 +136,35 @@ export class AssessmentAnswerController {
     );
   }
 
-  @Get('session/:sessionId')
-  @ApiOperation({ summary: 'Get all answers for a specific session' })
-  @ApiParam({ name: 'sessionId', description: 'Assessment session ID' })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Session answers retrieved successfully' 
-  })
-  async findBySession(@Param('sessionId') sessionId: string) {
-    return this.assessmentAnswerService.findBySession(sessionId);
-  }
-
-  @Get('session/:sessionId/progress')
-  @ApiOperation({ summary: 'Get session progress and statistics' })
-  @ApiParam({ name: 'sessionId', description: 'Assessment session ID' })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Session progress retrieved successfully' 
-  })
-  async getSessionProgress(@Param('sessionId') sessionId: string): Promise<any> {
-    return this.assessmentAnswerService.calculateSessionProgress(sessionId);
-  }
-
   @Get('user/:userId')
   @ApiOperation({ summary: 'Get answers for a specific user' })
   @ApiParam({ name: 'userId', description: 'User ID' })
-  @ApiQuery({ name: 'sessionId', required: false, type: String })
   @ApiResponse({ 
     status: 200, 
     description: 'User answers retrieved successfully' 
   })
-  async findByUser(
-    @Param('userId') userId: string,
-    @Query('sessionId') sessionId?: string,
-  ) {
-    return this.assessmentAnswerService.findByUser(userId, sessionId);
+  async findByUser(@Param('userId') userId: string) {
+    return this.assessmentAnswerService.findByUser(userId);
   }
 
   @Get('my-answers')
   @ApiOperation({ summary: 'Get current user answers' })
-  @ApiQuery({ name: 'sessionId', required: false, type: String })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'User answers retrieved successfully' 
+  @ApiResponse({
+    status: 200,
+    description: 'User answers retrieved successfully'
   })
-  async findMyAnswers(
-    @CurrentUser() user: CurrentUserPayload,
-    @Query('sessionId') sessionId?: string,
-  ) {
-    return this.assessmentAnswerService.findByUser(user.id, sessionId);
+  async findMyAnswers(@CurrentUser() user: CurrentUserPayload) {
+    return this.assessmentAnswerService.findByUser(user.userId);
+  }
+
+  @Get('my-stats')
+  @ApiOperation({ summary: 'Get current user answer statistics' })
+  @ApiResponse({
+    status: 200,
+    description: 'User answer statistics retrieved successfully'
+  })
+  async getMyStats(@CurrentUser() user: CurrentUserPayload) {
+    return this.assessmentAnswerService.getUserAnswerStats(user.userId);
   }
 
   @Get('question/:questionId')

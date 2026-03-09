@@ -22,15 +22,12 @@ export class CareerFitResult {
   @Prop({ required: true, type: Types.ObjectId, ref: 'User' })
   userId!: Types.ObjectId;
 
-  @Prop({ required: true, type: Types.ObjectId, ref: 'AssessmentSession' })
-  sessionId!: Types.ObjectId; // Alias for assessmentSessionId
-
-  @Prop({ required: true, type: Types.ObjectId, ref: 'AssessmentSession' })
-  assessmentSessionId!: Types.ObjectId;
-
   // Individual career result properties (for backward compatibility)
   @Prop({ type: Types.ObjectId, ref: 'Career' })
   careerId?: Types.ObjectId;
+
+  @Prop({ type: String })
+  careerTitle?: string;
 
   @Prop({ type: Number, min: 0, max: 100 })
   overallFitScore?: number;
@@ -41,12 +38,28 @@ export class CareerFitResult {
   @Prop({ type: [String] })
   developmentAreas?: string[];
 
+  @Prop({ type: [String] })
+  improvementSuggestions?: string[];
+
   @Prop({ type: Object })
   dimensionScores?: Record<string, number>;
 
+  @Prop({ type: Object })
+  personalityMatch?: {
+    big5Score?: number;
+    riasecScore?: number;
+    overallPersonalityFit?: number;
+  };
+
+  @Prop({ type: String })
+  aiExplanation?: string;
+
+  @Prop({ type: Number, min: 0, max: 100 })
+  confidence?: number;
+
   // Career recommendations with fit scores
-  @Prop({ required: true })
-  careerRecommendations!: {
+  @Prop({ type: Array })
+  careerRecommendations?: {
     careerId: Types.ObjectId; // Reference to Career
     fitScore: number; // 0-100 match percentage
     confidenceScore: number; // AI confidence in this recommendation
@@ -71,8 +84,8 @@ export class CareerFitResult {
   }[];
 
   // Overall assessment summary
-  @Prop({ required: true, type: Object })
-  personalityProfile!: {
+  @Prop({ type: Object })
+  personalityProfile?: {
     primaryTraits: string[];
     secondaryTraits: string[];
     workStyle: string;
@@ -80,15 +93,15 @@ export class CareerFitResult {
     motivators: string[];
   };
 
-  @Prop({ required: true, type: Object })
-  interestProfile!: {
+  @Prop({ type: Object })
+  interestProfile?: {
     hollandCodes: { code: string; score: number }[]; // RIASEC
     topInterests: string[];
     workValues: string[];
   };
 
-  @Prop({ required: true, type: Object })
-  skillProfile!: {
+  @Prop({ type: Object })
+  skillProfile?: {
     currentStrengths: { skill: string; level: number }[];
     developmentAreas: { skill: string; importance: number }[];
     learningStyle: string;

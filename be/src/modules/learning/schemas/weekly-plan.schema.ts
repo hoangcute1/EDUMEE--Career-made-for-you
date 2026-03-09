@@ -37,7 +37,13 @@ export class WeeklyPlan {
   @Prop({ required: true, type: Number })
   weekNumber!: number; // Week number in the roadmap (1, 2, 3...)
 
-  @Prop({ required: true })
+  @Prop({
+    required: true,
+    type: {
+      startDate: { type: Date, required: true },
+      endDate: { type: Date, required: true },
+    },
+  })
   weekPeriod!: {
     startDate: Date;
     endDate: Date;
@@ -47,7 +53,7 @@ export class WeeklyPlan {
   status!: PlanStatus;
 
   // Weekly objectives and goals
-  @Prop({ required: true })
+  @Prop({ required: true, type: Object })
   weeklyGoals!: {
     primary: string[]; // Must-accomplish goals
     secondary?: string[]; // Nice-to-have goals
@@ -55,7 +61,7 @@ export class WeeklyPlan {
   };
 
   // Planned tasks and activities
-  @Prop({ required: true })
+  @Prop({ required: true, type: [Object] })
   plannedActivities!: {
     activityId: string;
     type: 'simulation_task' | 'study_material' | 'practice' | 'mentoring' | 'checkpoint';
