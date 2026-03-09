@@ -1,41 +1,52 @@
 import {
+  Body,
   Controller,
+  DefaultValuePipe,
+  Delete,
   Get,
+  HttpStatus,
+  Param,
+  ParseIntPipe,
   Post,
   Put,
-  Delete,
-  Param,
-  Body,
   Query,
   UseGuards,
-  HttpStatus,
-  ParseIntPipe,
-  DefaultValuePipe
 } from '@nestjs/common';
 import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
   ApiBearerAuth,
+  ApiBody,
+  ApiOperation,
   ApiParam,
   ApiQuery,
-  ApiBody
+  ApiResponse,
+  ApiTags,
 } from '@nestjs/swagger';
 
+import { UserRole } from '../../common/enums/user-role.enum';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { UserRole } from '../../common/enums/user-role.enum';
-import { UserProfileService } from './user-profile.service';
-import { 
-  CreateUserProfileDto, 
-  UpdateUserProfileDto, 
-  UserProfileResponseDto 
+import {
+  CreateUserProfileDto,
+  UpdateUserProfileDto,
+  UserProfileResponseDto,
 } from './dto/user-profile.dto';
-import type { IUser } from './schemas/user.schema';
-import { EducationLevel, UserProfileDocument, Gender, BudgetLevel } from './schemas/user-profile.schema';
+import {
+  BudgetLevel,
+  EducationLevel,
+  Gender,
+  UserProfileDocument,
+} from './schemas/user-profile.schema';
+import { UserProfileService } from './user-profile.service';
 
+export interface RequestUser {
+  userId: string;
+  sub: string;
+  email: string;
+  role: string;
+  verify: number;
+}
 @ApiTags('User Profiles')
 @ApiBearerAuth('JWT-auth')
 @UseGuards(JwtAuthGuard)
@@ -44,90 +55,91 @@ export class UserProfileController {
   constructor(private readonly userProfileService: UserProfileService) {}
 
   @Post()
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Create user profile',
-    description: 'Create a new profile for the authenticated user' 
+    description: 'Create a new profile for the authenticated user',
   })
   @ApiBody({ type: CreateUserProfileDto })
-  @ApiResponse({ 
-    status: HttpStatus.CREATED, 
+  @ApiResponse({
+    status: HttpStatus.CREATED,
     description: 'Profile created successfully',
-    type: UserProfileResponseDto 
+    type: UserProfileResponseDto,
   })
-  @ApiResponse({ 
-    status: HttpStatus.CONFLICT, 
-    description: 'Profile already exists' 
+  @ApiResponse({
+    status: HttpStatus.CONFLICT,
+    description: 'Profile already exists',
   })
   async createProfile(
-    @CurrentUser() user: IUser,
-    @Body() createProfileDto: CreateUserProfileDto
+    @CurrentUser() user: RequestUser, // ĐỔI TỪ IUser/User THÀNH RequestUser
+    @Body() createProfileDto: CreateUserProfileDto,
   ): Promise<UserProfileDocument> {
-    return this.userProfileService.create(user.id, createProfileDto);
+    // ĐỔI TỪ user._id THÀNH user.userId
+    return this.userProfileService.create(user.userId, createProfileDto);
   }
 
   @Get('my-profile')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Get current user profile',
-    description: 'Get the profile of the authenticated user' 
+    description: 'Get the profile of the authenticated user',
   })
-  @ApiResponse({ 
-    status: HttpStatus.OK, 
+  @ApiResponse({
+    status: HttpStatus.OK,
     description: 'Profile retrieved successfully',
-    type: UserProfileResponseDto 
+    type: UserProfileResponseDto,
   })
-  @ApiResponse({ 
-    status: HttpStatus.NOT_FOUND, 
-    description: 'Profile not found' 
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Profile not found',
   })
-  async getMyProfile(@CurrentUser() user: IUser): Promise<UserProfileDocument | null> {
-    return this.userProfileService.findByUserId(user.id);
+  async getMyProfile(@CurrentUser() user: RequestUser): Promise<UserProfileDocument | null> {
+    return this.userProfileService.findByUserId(user.userId);
   }
 
   @Put('my-profile')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Update current user profile',
-    description: 'Update the profile of the authenticated user' 
+    description: 'Update the profile of the authenticated user',
   })
   @ApiBody({ type: UpdateUserProfileDto })
-  @ApiResponse({ 
-    status: HttpStatus.OK, 
+  @ApiResponse({
+    status: HttpStatus.OK,
     description: 'Profile updated successfully',
-    type: UserProfileResponseDto 
+    type: UserProfileResponseDto,
   })
-  @ApiResponse({ 
-    status: HttpStatus.NOT_FOUND, 
-    description: 'Profile not found' 
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Profile not found',
   })
   async updateMyProfile(
-    @CurrentUser() user: IUser,
-    @Body() updateProfileDto: UpdateUserProfileDto
+    @CurrentUser() user: RequestUser,
+    @Body() updateProfileDto: UpdateUserProfileDto,
   ): Promise<UserProfileDocument> {
-    return this.userProfileService.update(user.id, updateProfileDto);
+    return this.userProfileService.update(user.userId, updateProfileDto);
   }
 
   @Delete('my-profile')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Delete current user profile',
-    description: 'Delete the profile of the authenticated user' 
+    description: 'Delete the profile of the authenticated user',
   })
-  @ApiResponse({ 
-    status: HttpStatus.NO_CONTENT, 
-    description: 'Profile deleted successfully' 
+  @ApiResponse({
+    status: HttpStatus.NO_CONTENT,
+    description: 'Profile deleted successfully',
   })
-  @ApiResponse({ 
-    status: HttpStatus.NOT_FOUND, 
-    description: 'Profile not found' 
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Profile not found',
   })
-  async deleteMyProfile(@CurrentUser() user: IUser): Promise<void> {
-    return this.userProfileService.delete(user.id);
+  async deleteMyProfile(@CurrentUser() user: RequestUser): Promise<void> {
+    return this.userProfileService.delete(user.userId);
   }
 
   @Post('my-profile/update-constraints')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Update profile constraints',
-    description: 'Update the constraints JSON for the current user profile' 
+    description: 'Update the constraints JSON for the current user profile',
   })
-  @ApiBody({ 
+  @ApiBody({
     description: 'Constraints JSON object',
     schema: {
       type: 'object',
@@ -136,28 +148,28 @@ export class UserProfileController {
           type: 'object',
           example: {
             timePreferences: { availableDays: ['monday', 'wednesday'], preferredHours: 'evening' },
-            learningStyle: { visual: true, audio: false }
-          }
-        }
-      }
-    }
+            learningStyle: { visual: true, audio: false },
+          },
+        },
+      },
+    },
   })
-  @ApiResponse({ 
-    status: HttpStatus.OK, 
+  @ApiResponse({
+    status: HttpStatus.OK,
     description: 'Constraints updated successfully',
-    type: UserProfileResponseDto 
+    type: UserProfileResponseDto,
   })
   async updateConstraints(
-    @CurrentUser() user: IUser,
-    @Body('constraints') constraints: Record<string, any>
+    @CurrentUser() user: RequestUser,
+    @Body('constraints') constraints: Record<string, any>,
   ): Promise<UserProfileDocument> {
-    return this.userProfileService.updateConstraints(user.id, constraints);
+    return this.userProfileService.updateConstraints(user.userId, constraints);
   }
 
   @Get()
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Get all user profiles',
-    description: 'Get all user profiles with optional filtering' 
+    description: 'Get all user profiles with optional filtering',
   })
   @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
   @ApiQuery({ name: 'limit', required: false, type: Number, example: 10 })
@@ -167,16 +179,16 @@ export class UserProfileController {
   @ApiQuery({ name: 'gender', required: false, enum: Gender })
   @ApiQuery({ name: 'minWeeklyHours', required: false, type: Number })
   @ApiQuery({ name: 'maxWeeklyHours', required: false, type: Number })
-  @ApiResponse({ 
-    status: HttpStatus.OK, 
+  @ApiResponse({
+    status: HttpStatus.OK,
     description: 'User profiles retrieved successfully',
     schema: {
       type: 'object',
       properties: {
         profiles: { type: 'array', items: { $ref: '#/components/schemas/UserProfileResponseDto' } },
-        total: { type: 'number' }
-      }
-    }
+        total: { type: 'number' },
+      },
+    },
   })
   async getAllProfiles(
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
@@ -188,9 +200,10 @@ export class UserProfileController {
     @Query('minWeeklyHours') minWeeklyHours?: number,
     @Query('maxWeeklyHours') maxWeeklyHours?: number,
   ): Promise<{ profiles: UserProfileDocument[]; total: number }> {
-    const weeklyHours = (minWeeklyHours !== undefined || maxWeeklyHours !== undefined) 
-      ? { min: minWeeklyHours, max: maxWeeklyHours }
-      : undefined;
+    const weeklyHours =
+      minWeeklyHours !== undefined || maxWeeklyHours !== undefined
+        ? { min: minWeeklyHours, max: maxWeeklyHours }
+        : undefined;
 
     return this.userProfileService.findAll({
       page,
@@ -204,45 +217,47 @@ export class UserProfileController {
   }
 
   @Get('search/by-city')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Search profiles by city',
-    description: 'Search user profiles by city name' 
+    description: 'Search user profiles by city name',
   })
   @ApiQuery({ name: 'city', required: true, type: String })
-  @ApiResponse({ 
-    status: HttpStatus.OK, 
+  @ApiResponse({
+    status: HttpStatus.OK,
     description: 'Search results retrieved successfully',
-    type: [UserProfileResponseDto]
+    type: [UserProfileResponseDto],
   })
   async searchByCity(@Query('city') city: string): Promise<UserProfileDocument[]> {
     return this.userProfileService.searchByCity(city);
   }
 
   @Get('filter/by-budget')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Get profiles by budget level',
-    description: 'Get user profiles filtered by budget level' 
+    description: 'Get user profiles filtered by budget level',
   })
   @ApiQuery({ name: 'budgetLevel', required: true, enum: BudgetLevel })
-  @ApiResponse({ 
-    status: HttpStatus.OK, 
+  @ApiResponse({
+    status: HttpStatus.OK,
     description: 'Profiles retrieved successfully',
-    type: [UserProfileResponseDto]
+    type: [UserProfileResponseDto],
   })
-  async getByBudgetLevel(@Query('budgetLevel') budgetLevel: BudgetLevel): Promise<UserProfileDocument[]> {
+  async getByBudgetLevel(
+    @Query('budgetLevel') budgetLevel: BudgetLevel,
+  ): Promise<UserProfileDocument[]> {
     return this.userProfileService.getProfilesByBudgetLevel(budgetLevel);
   }
 
   @Get('filter/by-gender')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Get profiles by gender',
-    description: 'Get user profiles filtered by gender' 
+    description: 'Get user profiles filtered by gender',
   })
   @ApiQuery({ name: 'gender', required: true, enum: Gender })
-  @ApiResponse({ 
-    status: HttpStatus.OK, 
+  @ApiResponse({
+    status: HttpStatus.OK,
     description: 'Profiles retrieved successfully',
-    type: [UserProfileResponseDto]
+    type: [UserProfileResponseDto],
   })
   async getByGender(@Query('gender') gender: Gender): Promise<UserProfileDocument[]> {
     return this.userProfileService.getProfilesByGender(gender);
@@ -251,9 +266,9 @@ export class UserProfileController {
   @Get('analytics/profile-stats')
   @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.HR)
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Get profile statistics',
-    description: 'Get statistical data about user profiles (Admin/HR only)' 
+    description: 'Get statistical data about user profiles (Admin/HR only)',
   })
   @ApiResponse({
     status: HttpStatus.OK,
@@ -265,9 +280,9 @@ export class UserProfileController {
         educationDistribution: { type: 'object' },
         cityDistribution: { type: 'object' },
         genderDistribution: { type: 'object' },
-        budgetDistribution: { type: 'object' }
-      }
-    }
+        budgetDistribution: { type: 'object' },
+      },
+    },
   })
   async getProfileStats(): Promise<{
     totalProfiles: number;
@@ -280,19 +295,19 @@ export class UserProfileController {
   }
 
   @Get(':id')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Get profile by ID',
-    description: 'Get a specific profile by its ID' 
+    description: 'Get a specific profile by its ID',
   })
   @ApiParam({ name: 'id', description: 'Profile ID' })
-  @ApiResponse({ 
-    status: HttpStatus.OK, 
+  @ApiResponse({
+    status: HttpStatus.OK,
     description: 'Profile retrieved successfully',
-    type: UserProfileResponseDto 
+    type: UserProfileResponseDto,
   })
-  @ApiResponse({ 
-    status: HttpStatus.NOT_FOUND, 
-    description: 'Profile not found' 
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Profile not found',
   })
   async getProfileById(@Param('id') id: string): Promise<UserProfileDocument> {
     return this.userProfileService.findById(id);
@@ -301,24 +316,24 @@ export class UserProfileController {
   @Put(':id')
   @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.HR)
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Update profile by ID',
-    description: 'Update a specific profile by its ID (Admin/HR only)' 
+    description: 'Update a specific profile by its ID (Admin/HR only)',
   })
   @ApiParam({ name: 'id', description: 'Profile ID' })
   @ApiBody({ type: UpdateUserProfileDto })
-  @ApiResponse({ 
-    status: HttpStatus.OK, 
+  @ApiResponse({
+    status: HttpStatus.OK,
     description: 'Profile updated successfully',
-    type: UserProfileResponseDto 
+    type: UserProfileResponseDto,
   })
-  @ApiResponse({ 
-    status: HttpStatus.NOT_FOUND, 
-    description: 'Profile not found' 
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Profile not found',
   })
   async updateProfileById(
     @Param('id') id: string,
-    @Body() updateProfileDto: UpdateUserProfileDto
+    @Body() updateProfileDto: UpdateUserProfileDto,
   ): Promise<UserProfileDocument> {
     // For admin updates, we need to find the profile first to get userId
     const profile = await this.userProfileService.findById(id);
@@ -328,18 +343,18 @@ export class UserProfileController {
   @Delete(':id')
   @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Delete profile by ID',
-    description: 'Delete a specific profile by its ID (Admin only)' 
+    description: 'Delete a specific profile by its ID (Admin only)',
   })
   @ApiParam({ name: 'id', description: 'Profile ID' })
-  @ApiResponse({ 
-    status: HttpStatus.NO_CONTENT, 
-    description: 'Profile deleted successfully' 
+  @ApiResponse({
+    status: HttpStatus.NO_CONTENT,
+    description: 'Profile deleted successfully',
   })
-  @ApiResponse({ 
-    status: HttpStatus.NOT_FOUND, 
-    description: 'Profile not found' 
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Profile not found',
   })
   async deleteProfileById(@Param('id') id: string): Promise<void> {
     // For admin deletions, we need to find the profile first to get userId
@@ -348,19 +363,19 @@ export class UserProfileController {
   }
 
   @Get('user/:userId')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Get profile by user ID',
-    description: 'Get a profile by user ID' 
+    description: 'Get a profile by user ID',
   })
   @ApiParam({ name: 'userId', description: 'User ID' })
-  @ApiResponse({ 
-    status: HttpStatus.OK, 
+  @ApiResponse({
+    status: HttpStatus.OK,
     description: 'Profile retrieved successfully',
-    type: UserProfileResponseDto 
+    type: UserProfileResponseDto,
   })
-  @ApiResponse({ 
-    status: HttpStatus.NOT_FOUND, 
-    description: 'Profile not found' 
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Profile not found',
   })
   async getProfileByUserId(@Param('userId') userId: string): Promise<UserProfileDocument | null> {
     return this.userProfileService.findByUserId(userId);

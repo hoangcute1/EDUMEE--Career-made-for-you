@@ -1,21 +1,60 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
+import { InjectModel } from '@nestjs/mongoose';
+import axios from 'axios';
+import { SignOptions } from 'jsonwebtoken';
+import { Model, Types } from 'mongoose';
+// Import DTO
+import * as bcrypt from 'bcrypt';
+import { LoginDto } from './dto/login.dto';
+import { RegisterDto } from './dto/register.dto';
+// Import Schema & Service
 import { User, UserDocument } from '../users/schemas/user.schema';
 import { UsersService } from '../users/users.service';
-import { LoginDto, RegisterDto } from './dto';
-import { UserRole } from '../../common/enums/user-role.enum';
+import { RefreshToken, RefreshTokenDocument } from './schemas/refreshToken.schemas';
 
-export interface JwtPayload {
-  sub: string;
-  email: string;
-  role: string;
+// Import Utils & Enums
+import { UserRole, UserVerifyStatus } from '../../common/enums';
+import { MailService } from '../../common/mail/mail.service';
+
+// =======================================================================
+// INTERFACES
+// =======================================================================
+interface GoogleTokenResponse {
+  access_token: string;
+  id_token: string;
 }
 
 export interface AuthResponse {
-  user: Partial<User & { role: UserRole }>;
+  user: Partial<User & { role: UserRole; _id: Types.ObjectId }>;
   accessToken: string;
   refreshToken: string;
+}
+
+interface GoogleProfile {
+  email: string;
+  email_verified: boolean;
+  name: string;
+  picture: string;
+}
+
+interface JwtPayload {
+  user_id: string;
+  email: string;
+  role: string;
+  verify?: number;
+}
+
+interface DecodedToken {
+  iat: number;
+  exp: number;
+  user_id?: string;
 }
 
 @Injectable()
@@ -24,93 +63,332 @@ export class AuthService {
     private usersService: UsersService,
     private jwtService: JwtService,
     private configService: ConfigService,
+    @InjectModel(User.name) private userModel: Model<UserDocument>,
+    @InjectModel(RefreshToken.name) private refreshTokenModel: Model<RefreshTokenDocument>,
+    private mailService: MailService,
   ) {}
 
-  async register(registerDto: RegisterDto): Promise<AuthResponse> {
-    const createUserDto = {
-      email: registerDto.email,
-      password: registerDto.password,
-      firstName: registerDto.firstName,
-      lastName: registerDto.lastName,
-      role: registerDto.role || UserRole.USER,
+  // =========================================================================
+  // 1. REGISTER LOGIC (Giữ bản của bạn)
+  // =========================================================================
+  async register(registerDto: RegisterDto) {
+    return this.usersService.register(registerDto);
+  }
+
+  // =========================================================================
+  // 2. LOGIN LOGIC
+  // =========================================================================
+  async login(loginDto: LoginDto) {
+    const { email, password } = loginDto;
+
+    // 1. Chỉ tìm user bằng email
+    const user = await this.userModel.findOne({ email }).exec();
+
+    if (!user) {
+      throw new UnauthorizedException('Email hoặc mật khẩu không đúng');
+    }
+
+    // 2. So sánh mật khẩu bằng Bcrypt của đồng đội
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      throw new UnauthorizedException('Email hoặc mật khẩu không đúng');
+    }
+
+    const payload: JwtPayload = {
+      user_id: user._id.toString(),
+      email: user.email,
+      role: user.role,
+      verify: user.verify,
     };
 
-    const user = await this.usersService.create(createUserDto);
-    return this.generateAuthResponse(user);
+    const [access_token, refresh_token] = await Promise.all([
+      this.jwtService.signAsync(payload, {
+        secret: this.configService.get<string>('jwt.accessTokenSecret'),
+        expiresIn: this.configService.get<string>(
+          'jwt.accessTokenExpireIn',
+        ) as SignOptions['expiresIn'],
+      }),
+      this.jwtService.signAsync(payload, {
+        secret: this.configService.get<string>('jwt.secret'),
+        expiresIn: this.configService.get<string>('jwt.expiresIn') as SignOptions['expiresIn'],
+      }),
+    ]);
+
+    const rawDecoded: unknown = this.jwtService.decode(refresh_token);
+    const decodedRefreshToken = rawDecoded as DecodedToken;
+
+    await this.refreshTokenModel.create({
+      token: refresh_token,
+      user_id: user._id,
+      iat: new Date(decodedRefreshToken.iat * 1000),
+      exp: new Date(decodedRefreshToken.exp * 1000),
+      user_role: user.role,
+    });
+
+    return {
+      message: 'Đăng nhập thành công',
+      result: { access_token, refresh_token, role: user.role },
+      redirectTo: this.getRedirectPathByRole(user.role),
+    };
   }
 
-  async login(loginDto: LoginDto): Promise<AuthResponse> {
-    const user = await this.usersService.findByEmail(loginDto.email);
-
-    if (!user) {
-      throw new UnauthorizedException('Invalid credentials');
-    }
-
-    const isPasswordValid = await this.usersService.validatePassword(
-      user,
-      loginDto.password,
-    );
-
-    if (!isPasswordValid) {
-      throw new UnauthorizedException('Invalid credentials');
-    }
-
-    if (!user.isActive) {
-      throw new UnauthorizedException('Account is deactivated');
-    }
-
-    await this.usersService.updateLastLogin(user._id.toString());
-
-    return this.generateAuthResponse(user);
+  // =========================================================================
+  // 3. LOGOUT LOGIC
+  // =========================================================================
+  async logout(refreshToken: string) {
+    await this.refreshTokenModel.deleteOne({ token: refreshToken }).exec();
+    return { message: 'Đăng xuất thành công' };
   }
 
-  async validateGoogleUser(profile: {
-    googleId: string;
-    email: string;
-    firstName?: string;
-    lastName?: string;
-    avatar?: string;
-  }): Promise<AuthResponse> {
-    let user: UserDocument | null = await this.usersService.findByGoogleId(
-      profile.googleId,
-    );
+  // =========================================================================
+  // 4. XÁC THỰC EMAIL
+  // =========================================================================
+  async verifyEmail(token: string) {
+    try {
+      const decoded = await this.jwtService.verifyAsync<{ user_id: string }>(token, {
+        secret: this.configService.get<string>('jwt.emailVerifySecret'),
+      });
 
-    if (!user) {
-      user = await this.usersService.findByEmail(profile.email);
+      const user = await this.userModel.findById(decoded.user_id);
+      if (!user) throw new NotFoundException('Không tìm thấy người dùng');
 
-      if (user) {
-        // Link Google account to existing user
-        await this.usersService.update(user._id.toString(), {
-          // googleId: profile.googleId, // Would need to add this to UpdateUserDto
-        });
-      } else {
-        // Create new user
-        user = await this.usersService.create({
-          email: profile.email,
-          password: Math.random().toString(36).slice(-16) + 'Aa1!', // Random password for OAuth users
-          firstName: profile.firstName,
-          lastName: profile.lastName,
-        });
+      if (user.email_verify_token === '') {
+        return { message: 'Email đã được xác thực trước đó' };
       }
+
+      user.email_verify_token = '';
+      user.verify = UserVerifyStatus.Verified;
+      await user.save();
+
+      return { message: 'Xác thực email thành công' };
+    } catch (error) {
+      if (error instanceof NotFoundException) throw error;
+      throw new UnauthorizedException('Token xác thực không hợp lệ hoặc đã hết hạn');
+    }
+  }
+
+  // =========================================================================
+  // 5. GỬI LẠI EMAIL XÁC THỰC
+  // =========================================================================
+  async resendEmailVerify(email: string) {
+    const user = await this.userModel.findOne({ email });
+    if (!user) throw new NotFoundException('Không tìm thấy người dùng');
+
+    if (user.verify === UserVerifyStatus.Verified) {
+      throw new BadRequestException('Email này đã được xác thực rồi');
+    }
+
+    const email_verify_token = await this.jwtService.signAsync(
+      { user_id: user._id.toString(), verify: UserVerifyStatus.Unverified },
+      {
+        secret: this.configService.get<string>('jwt.emailVerifySecret'),
+        expiresIn: this.configService.get<string>(
+          'jwt.emailVerifyExpiresIn',
+        ) as SignOptions['expiresIn'],
+      },
+    );
+
+    user.email_verify_token = email_verify_token;
+    await user.save();
+
+    await this.mailService.sendVerificationEmail(email, user.name, email_verify_token);
+
+    return { message: 'Đã gửi lại email xác thực', email_verify_token };
+  }
+
+  // =========================================================================
+  // 6. QUÊN MẬT KHẨU
+  // =========================================================================
+  async forgotPassword(email: string) {
+    const user = await this.userModel.findOne({ email });
+    if (!user) throw new NotFoundException('Không tìm thấy người dùng');
+
+    const forgot_password_token = await this.jwtService.signAsync(
+      { user_id: user._id.toString(), verify: user.verify },
+      {
+        secret: this.configService.get<string>('jwt.forgotPasswordSecret'),
+        expiresIn: this.configService.get<string>(
+          'jwt.forgotPasswordExpiresIn',
+        ) as SignOptions['expiresIn'],
+      },
+    );
+
+    user.forgot_password_token = forgot_password_token;
+    await user.save();
+
+    await this.mailService.sendForgotPasswordEmail(email, user.name, forgot_password_token);
+
+    return { message: 'Vui lòng kiểm tra email để đặt lại mật khẩu', forgot_password_token };
+  }
+
+  // =========================================================================
+  // 7. KIỂM TRA TOKEN QUÊN MẬT KHẨU
+  // =========================================================================
+  async verifyForgotPasswordToken(token: string) {
+    try {
+      const decoded = await this.jwtService.verifyAsync<{ user_id: string }>(token, {
+        secret: this.configService.get<string>('jwt.forgotPasswordSecret'),
+      });
+
+      const user = await this.userModel.findById(decoded.user_id);
+      if (!user) throw new NotFoundException('Không tìm thấy người dùng');
+
+      if (user.forgot_password_token !== token) {
+        throw new UnauthorizedException('Token đã được sử dụng hoặc không hợp lệ');
+      }
+
+      return { message: 'Token hợp lệ' };
+    } catch (error) {
+      if (error instanceof NotFoundException || error instanceof UnauthorizedException) throw error;
+      throw new UnauthorizedException('Token không hợp lệ hoặc đã hết hạn');
+    }
+  }
+
+  // =========================================================================
+  // 8. ĐẶT LẠI MẬT KHẨU
+  // =========================================================================
+  async resetPassword(token: string, password: string) {
+    try {
+      const decoded = await this.jwtService.verifyAsync<{ user_id: string }>(token, {
+        secret: this.configService.get<string>('jwt.forgotPasswordSecret'),
+      });
+
+      const user = await this.userModel.findById(decoded.user_id);
+      if (!user || user.forgot_password_token !== token) {
+        throw new UnauthorizedException('Token không hợp lệ');
+      }
+
+      user.password = await bcrypt.hash(password, 12);
+      user.forgot_password_token = '';
+      await user.save();
+
+      return { message: 'Đặt lại mật khẩu thành công' };
+    } catch (error) {
+      if (error instanceof UnauthorizedException) throw error;
+      throw new UnauthorizedException('Token không hợp lệ hoặc đã hết hạn');
+    }
+  }
+
+  // =======================================================================
+  // 9. GIAO TIẾP VỚI GOOGLE OAUTH
+  // =======================================================================
+  private async getOAuthGoogleToken(code: string): Promise<GoogleTokenResponse> {
+    const body = {
+      code,
+      client_id: this.configService.get<string>('GOOGLE_CLIENT_ID') || '',
+      client_secret: this.configService.get<string>('GOOGLE_CLIENT_SECRET') || '',
+      redirect_uri: this.configService.get<string>('GOOGLE_CALLBACK_URL') || '',
+      grant_type: 'authorization_code',
+    };
+
+    const response = await axios.post<GoogleTokenResponse>(
+      'https://oauth2.googleapis.com/token',
+      body,
+      {
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      },
+    );
+
+    return response.data;
+  }
+
+  private async getGoogleUserInfo(access_token: string, id_token: string): Promise<GoogleProfile> {
+    const response = await axios.get<GoogleProfile>(
+      'https://www.googleapis.com/oauth2/v3/tokeninfo',
+      {
+        params: { access_token, alt: 'json' },
+        headers: { Authorization: `Bearer ${id_token}` },
+      },
+    );
+    return response.data;
+  }
+
+  // =======================================================================
+  // 10. XỬ LÝ LOGIC ĐĂNG NHẬP CHÍNH CỦA GOOGLE
+  // =======================================================================
+  async googleLogin(code: string) {
+    const { access_token: gg_token, id_token } = await this.getOAuthGoogleToken(code);
+    const userInfo = await this.getGoogleUserInfo(gg_token, id_token);
+
+    if (!userInfo.email_verified) {
+      throw new BadRequestException('Email Google này chưa được xác minh!');
+    }
+
+    let user = await this.userModel.findOne({ email: userInfo.email });
+    let isNewUser = 0;
+
+    if (user && user.verify !== UserVerifyStatus.Verified) {
+      user.verify = UserVerifyStatus.Verified;
+      await user.save();
     }
 
     if (!user) {
-      throw new UnauthorizedException('Failed to authenticate with Google');
+      const userId = new Types.ObjectId();
+      const randomPassword = Math.random().toString(36).slice(-10) + 'A1@';
+      const hashedPassword = await bcrypt.hash(randomPassword, 12);
+      user = await this.userModel.create({
+        _id: userId,
+        name: userInfo.name || 'Người dùng Google',
+        email: userInfo.email,
+        password: hashedPassword, // Đã thay đổi
+        gender: 'Other',
+        date_of_birth: new Date(),
+        verify: UserVerifyStatus.Verified,
+        username: `user${userId.toString()}`,
+        role: UserRole.USER,
+      });
+      isNewUser = 1;
+    }
+    const payload: JwtPayload = {
+      user_id: user._id.toString(),
+      email: user.email,
+      role: user.role,
+      verify: user.verify,
+    };
+
+    const [access_token, refresh_token] = await Promise.all([
+      this.jwtService.signAsync(payload, {
+        secret: this.configService.get<string>('jwt.accessTokenSecret') || 'default_secret',
+        expiresIn: (this.configService.get<string>('jwt.accessTokenExpireIn') ||
+          '15m') as SignOptions['expiresIn'],
+      }),
+      this.jwtService.signAsync(payload, {
+        secret: this.configService.get<string>('jwt.secret') || 'default_secret',
+        expiresIn: (this.configService.get<string>('jwt.expiresIn') ||
+          '7d') as SignOptions['expiresIn'],
+      }),
+    ]);
+
+    const rawDecoded: unknown = this.jwtService.decode(refresh_token);
+    const decoded = rawDecoded as DecodedToken;
+
+    if (!decoded || !decoded.iat || !decoded.exp) {
+      throw new UnauthorizedException('Có lỗi xảy ra khi tạo Token');
     }
 
-    await this.usersService.updateLastLogin(user._id.toString());
-    return this.generateAuthResponse(user);
+    await this.refreshTokenModel.create({
+      token: refresh_token,
+      user_id: user._id,
+      iat: new Date(decoded.iat * 1000),
+      exp: new Date(decoded.exp * 1000),
+      user_role: user.role,
+    });
+
+    return { access_token, refresh_token, new_user: isNewUser };
   }
 
+  // =======================================================================
+  // 11. Thi (REFRESH TOKEN & HELPERS)
+  // =======================================================================
   async refreshToken(refreshToken: string): Promise<AuthResponse> {
     try {
       const payload = this.jwtService.verify<JwtPayload>(refreshToken, {
-        secret: this.configService.get('jwt.refreshSecret'),
+        secret: this.configService.get('jwt.secret'),
       });
 
-      const user = await this.usersService.findById(payload.sub);
-      
-      if (!user || !user.isActive) {
+      const user = await this.userModel.findById(payload.user_id).exec();
+
+      if (!user) {
         throw new UnauthorizedException('Invalid refresh token');
       }
 
@@ -122,64 +400,62 @@ export class AuthService {
 
   private generateAuthResponse(user: UserDocument): AuthResponse {
     const accessToken = this.generateAccessToken(user);
-    const refreshToken = this.generateRefreshToken(user);
+    const refreshTokenStr = this.generateRefreshToken(user);
 
     return {
       user: {
         _id: user._id,
         email: user.email || '',
-        firstName: user.firstName,
-        lastName: user.lastName,
+        name: user.name,
         role: user.role || UserRole.USER,
         avatar: user.avatar,
       },
       accessToken,
-      refreshToken,
+      refreshToken: refreshTokenStr,
     };
   }
 
   private generateAccessToken(user: UserDocument): string {
     const payload: JwtPayload = {
-      sub: user._id.toString(),
+      user_id: user._id.toString(),
       email: user.email || '',
       role: user.role || UserRole.USER,
+      verify: user.verify,
     };
-
     return this.jwtService.sign(payload, {
-      secret: this.configService.get('jwt.secret'),
-      expiresIn: this.configService.get('jwt.expiresIn'),
+      secret: this.configService.get<string>('jwt.accessTokenSecret'),
+      expiresIn: this.configService.get<string>(
+        'jwt.accessTokenExpireIn',
+      ) as SignOptions['expiresIn'],
     });
   }
 
   private generateRefreshToken(user: UserDocument): string {
     const payload: JwtPayload = {
-      sub: user._id.toString(),
+      user_id: user._id.toString(),
       email: user.email || '',
       role: user.role || UserRole.USER,
+      verify: user.verify,
     };
-
     return this.jwtService.sign(payload, {
-      secret: this.configService.get('jwt.refreshSecret'),
-      expiresIn: this.configService.get('jwt.refreshExpiresIn'),
+      secret: this.configService.get<string>('jwt.secret'),
+      expiresIn: this.configService.get<string>('jwt.expiresIn') as SignOptions['expiresIn'],
     });
   }
 
-  getDebugInfo() {
-    return {
-      jwtConfig: {
-        secret: this.configService.get('jwt.secret') ? 'SET' : 'NOT SET',
-        expiresIn: this.configService.get<string>('jwt.expiresIn'),
-        refreshSecret: this.configService.get('jwt.refreshSecret') ? 'SET' : 'NOT SET',
-        refreshExpiresIn: this.configService.get<string>('jwt.refreshExpiresIn'),
-      },
-      environment: this.configService.get<string>('NODE_ENV') || 'development',
-      database: this.configService.get('DATABASE_URI') ? 'CONFIGURED' : 'NOT CONFIGURED',
-      timestamp: new Date().toISOString(),
-      tokenFormat: 'Bearer <your-access-token>',
-      example: {
-        loginFirst: 'POST /api/v1/auth/login',
-        thenUseToken: 'Authorization: Bearer <access-token-from-login-response>',
-      }
-    };
+  // =======================================================================
+  // 12. HÀM ĐIỀU HƯỚNG THEO ROLE (Thuận)
+  // =======================================================================
+  private getRedirectPathByRole(role: UserRole): string {
+    switch (role) {
+      case UserRole.ADMIN:
+        return '/dashboard/admin';
+      case UserRole.MENTOR:
+        return '/dashboard/mentor';
+      case UserRole.EMPLOYER:
+        return '/dashboard/employer';
+      default:
+        return '/home';
+    }
   }
 }

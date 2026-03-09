@@ -1,116 +1,109 @@
-import { PaginationDto } from '../../common/dto';
 import {
+  BadRequestException,
   Body,
   Controller,
+  DefaultValuePipe,
   Delete,
   Get,
   Param,
+  ParseIntPipe,
   Patch,
   Post,
   Query,
-  Put,
   UseGuards,
-  UnauthorizedException,
 } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiTags, ApiBearerAuth } from '@nestjs/swagger';
-import { CreateUserDto, UpdateUserDto, ChangePasswordDto, ResetPasswordDto } from './dto';
-import { UsersService } from './users.service';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
+import { AuthGuard } from '@nestjs/passport';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+
+import { UserRole } from '../../common/enums';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { UserRole } from '../../common/enums/user-role.enum';
-import type { IUser } from './schemas/user.schema';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { UsersService } from './users.service';
+
+import { ChangePasswordDto } from './dto/change-password.dto';
+import { UpdateMeDto } from './dto/update-me.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
+import { UserDocument } from './schemas';
+
+export interface RequestUser {
+  userId: string;
+  sub: string;
+  email: string;
+  role: string;
+  verify: number;
+}
 
 @ApiTags('Users')
+@ApiBearerAuth('JWT-auth')
 @Controller('users')
+@UseGuards(AuthGuard('jwt'))
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  @Post()
-  @ApiOperation({ summary: 'Create a new user' })
-  @ApiResponse({ status: 201, description: 'User created successfully' })
-  @ApiResponse({ status: 409, description: 'Email already exists' })
-  create(@Body() createUserDto: CreateUserDto) {
-    return this.usersService.create(createUserDto);
+  // =======================================================================
+  //! 1. NHÓM API user
+  // =======================================================================
+  @ApiOperation({ summary: 'Lấy thông tin cá nhân của người đang đăng nhập' })
+  @Get('me')
+  async getMe(@CurrentUser() user: RequestUser) {
+    return await this.usersService.getMe(user.userId);
   }
 
-  @Get()
-  @ApiOperation({ summary: 'Get all users with pagination' })
-  @ApiResponse({ status: 200, description: 'List of users' })
-  findAll(@Query() paginationDto: PaginationDto) {
-    return this.usersService.findAll(paginationDto.page, paginationDto.limit);
+  @ApiOperation({ summary: 'Cập nhật thông tin cá nhân' })
+  @Patch('me')
+  async updateMe(@CurrentUser() user: RequestUser, @Body() updateData: UpdateMeDto) {
+    return await this.usersService.updateMe(user.userId, updateData);
   }
 
-  @Get(':id')
-  @ApiOperation({ summary: 'Get user by ID' })
-  @ApiResponse({ status: 200, description: 'User found' })
-  @ApiResponse({ status: 404, description: 'User not found' })
-  findOne(@Param('id') id: string) {
-    return this.usersService.findById(id);
-  }
+  @ApiOperation({ summary: 'Đổi mật khẩu (Yêu cầu mật khẩu cũ)' })
+  @Post('change-password')
+  async changePassword(@CurrentUser() user: RequestUser, @Body() body: ChangePasswordDto) {
+    const dbUser = await this.usersService.findById(user.userId);
+    if (!dbUser) throw new BadRequestException('Người dùng không tồn tại');
 
-  @Patch(':id')
-  @ApiOperation({ summary: 'Update user' })
-  @ApiResponse({ status: 200, description: 'User updated successfully' })
-  @ApiResponse({ status: 404, description: 'User not found' })
-  update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
-    return this.usersService.update(id, updateUserDto);
-  }
-
-  @Delete(':id')
-  @ApiOperation({ summary: 'Delete user' })
-  @ApiResponse({ status: 200, description: 'User deleted successfully' })
-  @ApiResponse({ status: 404, description: 'User not found' })
-  remove(@Param('id') id: string) {
-    return this.usersService.remove(id);
-  }
-
-  @Put('change-password')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Change current user password' })
-  @ApiResponse({ status: 200, description: 'Password changed successfully' })
-  @ApiResponse({ status: 401, description: 'Invalid current password' })
-  @ApiResponse({ status: 404, description: 'User not found' })
-  async changePassword(
-    @CurrentUser() user: IUser,
-    @Body() changePasswordDto: ChangePasswordDto
-  ) {
-    // Validate current password
-    const isCurrentPasswordValid = await this.usersService.validatePassword(
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-      user as any,
-      changePasswordDto.currentPassword
+    const isMatch = await this.usersService.validatePassword(
+      dbUser as UserDocument,
+      body.currentPassword,
     );
 
-    if (!isCurrentPasswordValid) {
-      throw new UnauthorizedException('Current password is incorrect');
+    if (!isMatch) {
+      throw new BadRequestException('Mật khẩu hiện tại không đúng');
     }
 
-    await this.usersService.changePassword(user.id, changePasswordDto.newPassword);
-    
-    return { message: 'Password changed successfully' };
+    // 3. Tiến hành đổi mật khẩu
+    await this.usersService.changePassword(user.userId, body.newPassword);
+    return { message: 'Đổi mật khẩu thành công' };
   }
 
-  @Put('reset-password')
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  // =======================================================================
+  //! API QUẢN TRỊ (CHỈ DÀNH CHO ADMIN)
+  // =======================================================================
+  @ApiOperation({ summary: 'Lấy danh sách tất cả người dùng (Admin)' })
+  @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN)
-  @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ 
-    summary: 'Reset user password (Admin only)',
-    description: 'Allows admin to reset any user password'
-  })
-  @ApiResponse({ status: 200, description: 'Password reset successfully' })
-  @ApiResponse({ status: 404, description: 'User not found' })
-  @ApiResponse({ status: 401, description: 'Invalid reset token' })
-  async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
-    await this.usersService.resetPassword(
-      resetPasswordDto.email,
-      resetPasswordDto.newPassword,
-      resetPasswordDto.resetToken
-    );
-    
-    return { message: 'Password reset successfully' };
+  @Get()
+  async findAll(
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
+  ) {
+    return await this.usersService.findAll(page, limit);
+  }
+
+  @ApiOperation({ summary: 'Sửa thông tin người dùng nào (Admin)' })
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @Patch(':id')
+  async update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
+    return await this.usersService.update(id, updateUserDto);
+  }
+
+  @ApiOperation({ summary: 'Xóa người dùng (Admin)' })
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @Delete(':id')
+  async remove(@Param('id') id: string) {
+    await this.usersService.remove(id);
+    return { message: 'Xóa người dùng thành công' };
   }
 }
