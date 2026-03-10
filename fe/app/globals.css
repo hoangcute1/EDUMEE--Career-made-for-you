@@ -152,6 +152,11 @@
   --gold: 45 80% 50%;
   --gold-light: 45 35% 15%;
 
+  --gradient-hero: linear-gradient(135deg, hsl(205 85% 50%), hsl(260 50% 55%));
+  --gradient-card: linear-gradient(135deg, hsl(220 20% 14%), hsl(260 20% 16%));
+  --gradient-accent: linear-gradient(135deg, hsl(25 90% 50%), hsl(12 80% 55%));
+  --gradient-mint: linear-gradient(135deg, hsl(160 40% 40%), hsl(205 85% 50%));
+
   --sidebar-background: 220 20% 10%;
   --sidebar-foreground: 210 30% 90%;
   --sidebar-primary: 205 85% 60%;

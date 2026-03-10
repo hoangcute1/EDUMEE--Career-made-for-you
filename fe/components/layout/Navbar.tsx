@@ -27,7 +27,7 @@ const baseNavItems = [
   { href: '/career-simulation', label: 'Mô phỏng nghề', icon: BarChart3 },
   { href: '/career-compare', label: 'So sánh', icon: GitCompare },
   { href: '/learning-roadmap', label: 'Lộ trình', icon: BookOpen },
-  { href: '/specialization', label: 'Xu hướng', icon: TrendingUp },
+  { href: '/specialization', label: 'Khám phá', icon: TrendingUp },
   { href: '/mentor-matching', label: 'Mentor', icon: GraduationCap },
   { href: '/community', label: 'Cộng đồng', icon: Users },
 ];

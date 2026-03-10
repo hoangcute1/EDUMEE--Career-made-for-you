@@ -1,152 +1,420 @@
-"use client";
+'use client';
 
-import { motion } from "framer-motion";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { TrendingUp, AlertTriangle, Sparkles, ArrowUpRight, ArrowDownRight, Minus } from "lucide-react";
+import { Button } from '@/components/ui/button';
+import { motion } from 'framer-motion';
+import {
+  Bot,
+  ChevronDown,
+  Filter,
+  GitCompare,
+  MapPin,
+  Search,
+  Star,
+  TrendingUp,
+} from 'lucide-react';
+import Link from 'next/link';
+import { useMemo, useState } from 'react';
 
-const specializations = [
+/* ─── Data ─── */
+const CATEGORIES = [
+  'Tất cả',
+  'Công nghệ',
+  'Dữ liệu & AI',
+  'Thiết kế',
+  'Marketing',
+  'Y tế',
+  'Pháp luật',
+  'Xây dựng',
+  'Quản lý sản phẩm',
+];
+
+const SORT_OPTIONS = ['Phù hợp nhất', 'Lương cao nhất', 'Tăng trưởng cao nhất'];
+
+const careers = [
   {
-    title: "Frontend Developer",
-    trend: "up",
-    trendLabel: "Tăng trưởng mạnh",
-    risk: "low",
-    opportunity: 90,
-    salary: "15–40 triệu",
-    description: "Phát triển giao diện web/app với React, Vue, Angular. Nhu cầu tuyển dụng cao, đặc biệt Remote.",
-    skills: ["React", "TypeScript", "CSS", "UI/UX"],
-    forecast: "Nhu cầu tăng 25% trong 5 năm tới nhờ AI-powered interfaces.",
+    id: 'software-engineer',
+    icon: '💻',
+    title: 'Kỹ sư Phần mềm',
+    category: 'Công nghệ',
+    categoryColor: 'bg-sky-light text-primary',
+    match: 92,
+    description: 'Xây dựng và phát triển ứng dụng phần mềm cho web, mobile và desktop.',
+    salaryMin: 25,
+    salaryMax: 60,
+    growth: 22,
+    demandLabel: 'Rất cao',
+    demandStars: 4,
+    skills: ['JavaScript', 'Python', 'React', 'Node.js'],
+    aiInsight: 'AI và automation sẽ thay đổi nhưng không thay thế kỹ sư phần mềm.',
   },
   {
-    title: "AI / ML Engineer",
-    trend: "up",
-    trendLabel: "Tăng mạnh nhất",
-    risk: "medium",
-    opportunity: 95,
-    salary: "25–80 triệu",
-    description: "Xây dựng mô hình AI, machine learning, deep learning. Lĩnh vực bùng nổ toàn cầu.",
-    skills: ["Python", "TensorFlow", "Math", "Data"],
-    forecast: "Bùng nổ x3 trong 5 năm, nhưng yêu cầu học vấn & kỹ năng cao.",
+    id: 'data-scientist',
+    icon: '📊',
+    title: 'Data Scientist',
+    category: 'Dữ liệu & AI',
+    categoryColor: 'bg-lavender text-secondary',
+    match: 87,
+    description: 'Phân tích dữ liệu lớn để tìm insight và xây dựng mô hình dự đoán.',
+    salaryMin: 20,
+    salaryMax: 50,
+    growth: 35,
+    demandLabel: 'Cao',
+    demandStars: 5,
+    skills: ['Python', 'SQL', 'Machine Learning', 'Statistics'],
+    aiInsight: 'Nhu cầu tăng mạnh trong mọi ngành cần chuyên sâu về dữ liệu.',
   },
   {
-    title: "Business Analyst",
-    trend: "stable",
-    trendLabel: "Ổn định",
-    risk: "low",
-    opportunity: 75,
-    salary: "15–45 triệu",
-    description: "Phân tích yêu cầu kinh doanh, cầu nối giữa business và tech team.",
-    skills: ["Communication", "SQL", "Process Design", "Agile"],
-    forecast: "Nhu cầu ổn định, phù hợp với người thích giao tiếp + phân tích.",
+    id: 'ai-ml-engineer',
+    icon: '🤖',
+    title: 'Kỹ sư AI/ML',
+    category: 'Dữ liệu & AI',
+    categoryColor: 'bg-lavender text-secondary',
+    match: 85,
+    description: 'Xây dựng và triển khai các mô hình AI/ML cho sản phẩm thực tế.',
+    salaryMin: 30,
+    salaryMax: 80,
+    growth: 45,
+    demandLabel: 'Rất cao',
+    demandStars: 5,
+    skills: ['Deep Learning', 'TensorFlow', 'Python', 'Research'],
+    aiInsight: 'Lĩnh vực hot nhất thập kỷ với lương tầm cao và xuất sắc.',
   },
   {
-    title: "Data Analyst / Scientist",
-    trend: "up",
-    trendLabel: "Tăng trưởng tốt",
-    risk: "low",
-    opportunity: 85,
-    salary: "18–50 triệu",
-    description: "Phân tích dữ liệu, xây dựng dashboard, tìm insights kinh doanh.",
-    skills: ["Python", "SQL", "Statistics", "Visualization"],
-    forecast: "Mỗi công ty đều cần data – nhu cầu tăng đều 15%/năm.",
+    id: 'product-manager',
+    icon: '🎯',
+    title: 'Product Manager',
+    category: 'Quản lý sản phẩm',
+    categoryColor: 'bg-mint-light text-mint',
+    match: 78,
+    description: 'Định hướng và phát triển sản phẩm từ ý tưởng đến thị trường.',
+    salaryMin: 25,
+    salaryMax: 70,
+    growth: 25,
+    demandLabel: 'Cao',
+    demandStars: 4,
+    skills: ['Strategy', 'Agile', 'Data Analysis', 'Communication'],
+    aiInsight: 'Vai trò không thể thiếu trong mọi công ty công nghệ.',
   },
   {
-    title: "Product Manager",
-    trend: "stable",
-    trendLabel: "Ổn định cao",
-    risk: "low",
-    opportunity: 80,
-    salary: "20–60 triệu",
-    description: "Quản lý sản phẩm, chiến lược phát triển, làm việc với nhiều team.",
-    skills: ["Strategy", "UX", "Analytics", "Leadership"],
-    forecast: "Vị trí then chốt, lương cao nhưng đòi hỏi kinh nghiệm 2-3 năm+.",
+    id: 'ux-ui-designer',
+    icon: '🎨',
+    title: 'UX/UI Designer',
+    category: 'Thiết kế',
+    categoryColor: 'bg-coral-light text-coral',
+    match: 65,
+    description: 'Thiết kế trải nghiệm người dùng và giao diện sản phẩm số.',
+    salaryMin: 15,
+    salaryMax: 40,
+    growth: 18,
+    demandLabel: 'Cao',
+    demandStars: 4,
+    skills: ['Figma', 'User Research', 'Prototyping', 'Design System'],
+    aiInsight: 'AI tools hỗ trợ nhưng không thay thế creative thinking.',
+  },
+  {
+    id: 'marketing-manager',
+    icon: '📣',
+    title: 'Marketing Manager',
+    category: 'Marketing',
+    categoryColor: 'bg-gold-light text-gold',
+    match: 58,
+    description: 'Lên chiến lược và thực thi các chiến dịch Marketing cho doanh nghiệp.',
+    salaryMin: 15,
+    salaryMax: 35,
+    growth: 15,
+    demandLabel: 'Cao',
+    demandStars: 4,
+    skills: ['Digital Marketing', 'Content', 'Analytics', 'SEO/SEM'],
+    aiInsight: 'Digital marketing và AI marketing đang bùng nổ tại Việt Nam.',
+  },
+  {
+    id: 'architect',
+    icon: '🏛️',
+    title: 'Kiến trúc sư',
+    category: 'Xây dựng',
+    categoryColor: 'bg-gold-light text-gold',
+    match: 52,
+    description: 'Thiết kế công trình kiến trúc từ nhà ở đến tòa nhà thương mại.',
+    salaryMin: 15,
+    salaryMax: 45,
+    growth: 10,
+    demandLabel: 'Trung bình',
+    demandStars: 3,
+    skills: ['AutoCAD', 'Revit', 'Thiết kế', 'BIM'],
+    aiInsight: 'Sustainable architecture và smart building đang là xu hướng mới.',
+  },
+  {
+    id: 'doctor',
+    icon: '🩺',
+    title: 'Bác sĩ',
+    category: 'Y tế',
+    categoryColor: 'bg-mint-light text-mint',
+    match: 45,
+    description: 'Chăm sóc và điều trị sức khỏe cho bệnh nhân tại các cơ sở y tế.',
+    salaryMin: 20,
+    salaryMax: 100,
+    growth: 12,
+    demandLabel: 'Rất cao',
+    demandStars: 5,
+    skills: ['Y học', 'Chẩn đoán', 'Phẫu thuật', 'Giao tiếp'],
+    aiInsight: 'AI hỗ trợ chẩn đoán nhưng bác sĩ là nền tảng không thể thay thế.',
+  },
+  {
+    id: 'lawyer',
+    icon: '⚖️',
+    title: 'Luật sư',
+    category: 'Pháp luật',
+    categoryColor: 'bg-sky-light text-primary',
+    match: 40,
+    description: 'Tư vấn pháp lý và bảo vệ quyền lợi cho khách hàng và doanh nghiệp.',
+    salaryMin: 15,
+    salaryMax: 80,
+    growth: 8,
+    demandLabel: 'Trung bình',
+    demandStars: 3,
+    skills: ['Luật pháp', 'Nghiên cứu', 'Tranh tụng', 'Tư vấn'],
+    aiInsight: 'Legal tech và AI đang thay đổi cách ngành luật vận hành.',
   },
 ];
 
-const TrendIcon = ({ trend }: { trend: string }) => {
-  if (trend === "up") return <ArrowUpRight className="w-4 h-4 text-mint" />;
-  if (trend === "down") return <ArrowDownRight className="w-4 h-4 text-destructive" />;
-  return <Minus className="w-4 h-4 text-gold" />;
+/* ─── Match color gradient helper ─── */
+const matchGradient = (match: number) => {
+  if (match >= 80) return 'from-violet-500 to-purple-600';
+  if (match >= 60) return 'from-blue-500 to-cyan-500';
+  if (match >= 40) return 'from-orange-400 to-amber-500';
+  return 'from-gray-400 to-gray-500';
 };
 
+const matchTextColor = (match: number) => {
+  if (match >= 80) return 'text-violet-600 dark:text-violet-400';
+  if (match >= 60) return 'text-blue-600 dark:text-blue-400';
+  if (match >= 40) return 'text-orange-500';
+  return 'text-gray-500';
+};
+
+/* ─── Stars component ─── */
+const Stars = ({ count }: { count: number }) => (
+  <span className="flex items-center gap-0.5">
+    {[1, 2, 3, 4, 5].map((i) => (
+      <Star
+        key={i}
+        className={`h-3 w-3 ${i <= count ? 'fill-gold text-gold' : 'fill-muted text-muted'}`}
+      />
+    ))}
+  </span>
+);
+
+/* ─── Career Card ─── */
+const CareerCard = ({ career, index }: { career: (typeof careers)[0]; index: number }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ delay: index * 0.05 }}
+    className="glass-card flex flex-col overflow-hidden rounded-2xl"
+  >
+    {/* Gradient top strip */}
+    <div className={`h-1 w-full bg-linear-to-r ${matchGradient(career.match)}`} />
+
+    <div className="flex flex-1 flex-col p-5">
+      {/* Header row */}
+      <div className="mb-3 flex items-start justify-between gap-2">
+        <div className="flex items-center gap-3">
+          <span className="bg-muted flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-2xl">
+            {career.icon}
+          </span>
+          <div>
+            <p className="font-display leading-tight font-semibold">{career.title}</p>
+            <span
+              className={`mt-0.5 inline-block rounded-full px-2 py-0.5 text-xs font-medium ${career.categoryColor}`}
+            >
+              {career.category}
+            </span>
+          </div>
+        </div>
+        <div className="shrink-0 text-right">
+          <p className={`text-lg font-bold ${matchTextColor(career.match)}`}>{career.match}%</p>
+          <p className="text-muted-foreground text-xs">phù hợp</p>
+        </div>
+      </div>
+
+      {/* Match progress bar */}
+      <div className="bg-muted mb-3 h-1.5 w-full overflow-hidden rounded-full">
+        <div
+          className={`h-full rounded-full bg-linear-to-r ${matchGradient(career.match)} transition-all duration-700`}
+          style={{ width: `${career.match}%` }}
+        />
+      </div>
+
+      {/* Description */}
+      <p className="text-muted-foreground mb-4 line-clamp-2 text-sm">{career.description}</p>
+
+      {/* Salary + Growth */}
+      <div className="mb-3 flex items-center gap-4 text-sm">
+        <span className="text-foreground flex items-center gap-1 font-medium">
+          <span className="text-mint">$</span>
+          {career.salaryMin}–{career.salaryMax} triệu
+        </span>
+        <span className="text-mint flex items-center gap-1 font-medium">
+          <TrendingUp className="h-3.5 w-3.5" />+{career.growth}%
+        </span>
+      </div>
+
+      {/* Demand */}
+      <div className="mb-3 flex items-center gap-2 text-sm">
+        <span className="text-muted-foreground">Nhu cầu:</span>
+        <span className="font-medium">{career.demandLabel}</span>
+        <Stars count={career.demandStars} />
+      </div>
+
+      {/* Skills */}
+      <div className="mb-3 flex flex-wrap gap-1.5">
+        {career.skills.map((s) => (
+          <span key={s} className="bg-sky-light text-primary rounded-full px-2.5 py-0.5 text-xs">
+            {s}
+          </span>
+        ))}
+      </div>
+
+      {/* AI insight */}
+      <div className="bg-primary/5 mb-4 flex items-start gap-2 rounded-xl p-2.5">
+        <Bot className="text-primary mt-0.5 h-3.5 w-3.5 shrink-0" />
+        <p className="text-muted-foreground text-xs">{career.aiInsight}</p>
+      </div>
+
+      {/* Buttons */}
+      <div className="mt-auto flex gap-2">
+        <Link href="/learning-roadmap" className="flex-1">
+          <Button variant="hero" size="sm" className="w-full gap-1.5">
+            <MapPin className="h-3.5 w-3.5" /> Lộ trình
+          </Button>
+        </Link>
+        <Link href="/career-compare">
+          <Button variant="outline" size="sm" className="gap-1.5">
+            <GitCompare className="h-3.5 w-3.5" /> So sánh
+          </Button>
+        </Link>
+      </div>
+    </div>
+  </motion.div>
+);
+
+/* ─── Main view ─── */
 const Specialization = () => {
+  const [search, setSearch] = useState('');
+  const [activeCategory, setActiveCategory] = useState('Tất cả');
+  const [sortBy, setSortBy] = useState(SORT_OPTIONS[0]);
+  const [showSort, setShowSort] = useState(false);
+
+  const filtered = useMemo(() => {
+    let list = careers;
+    if (activeCategory !== 'Tất cả') {
+      list = list.filter((c) => c.category === activeCategory);
+    }
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      list = list.filter(
+        (c) =>
+          c.title.toLowerCase().includes(q) ||
+          c.category.toLowerCase().includes(q) ||
+          c.skills.some((s) => s.toLowerCase().includes(q)),
+      );
+    }
+    if (sortBy === 'Lương cao nhất') list = [...list].sort((a, b) => b.salaryMax - a.salaryMax);
+    else if (sortBy === 'Tăng trưởng cao nhất')
+      list = [...list].sort((a, b) => b.growth - a.growth);
+    else list = [...list].sort((a, b) => b.match - a.match);
+    return list;
+  }, [search, activeCategory, sortBy]);
+
   return (
     <div className="min-h-screen pb-20">
+      {/* Header */}
       <div className="bg-gradient-card">
-        <div className="container py-8">
+        <div className="container py-10 text-center">
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-sm mb-3">
-              <TrendingUp className="w-4 h-4" /> Dự đoán AI
-            </div>
-            <h1 className="text-2xl md:text-3xl font-bold font-display">Hướng chuyên sâu & Xu hướng</h1>
-            <p className="text-muted-foreground mt-1">Dựa trên hồ sơ IT của bạn – Xu hướng 5–10 năm tới</p>
+            <span className="bg-primary/10 text-primary mb-3 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-medium">
+              <TrendingUp className="h-4 w-4" /> 200+ ngành nghề
+            </span>
+            <h1 className="font-display text-3xl font-bold md:text-4xl">Khám phá nghề nghiệp</h1>
+            <p className="text-muted-foreground mt-2">
+              Tìm hiểu chi tiết về lương, kỹ năng, xu hướng và độ phù hợp của từng ngành
+            </p>
           </motion.div>
         </div>
       </div>
 
-      <div className="container mt-6 space-y-4">
-        {specializations.map((spec, i) => (
-          <motion.div
-            key={spec.title}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.08 }}
-            className="glass-card rounded-2xl p-6"
-          >
-            <div className="flex items-start justify-between mb-3">
-              <div>
-                <h3 className="text-lg font-semibold font-display">{spec.title}</h3>
-                <div className="flex items-center gap-2 mt-1">
-                  <TrendIcon trend={spec.trend} />
-                  <span className="text-sm text-muted-foreground">{spec.trendLabel}</span>
-                  <span className="text-sm text-muted-foreground">·</span>
-                  <span className="text-sm font-medium">{spec.salary}</span>
-                </div>
+      <div className="container mt-6 space-y-5">
+        {/* Search + Sort */}
+        <div className="flex items-center gap-3">
+          <div className="relative flex-1">
+            <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Tìm kiếm nghề nghiệp..."
+              className="border-input bg-background focus:ring-ring h-10 w-full rounded-xl border pr-4 pl-9 text-sm outline-none focus:ring-2"
+            />
+          </div>
+          <Button variant="outline" size="sm" className="shrink-0 gap-1.5">
+            <Filter className="h-4 w-4" /> Lọc
+          </Button>
+          <div className="relative shrink-0">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => setShowSort((v) => !v)}
+            >
+              Sắp xếp: {sortBy} <ChevronDown className="h-4 w-4" />
+            </Button>
+            {showSort && (
+              <div className="border-border bg-background absolute right-0 z-10 mt-1 w-52 rounded-xl border shadow-lg">
+                {SORT_OPTIONS.map((opt) => (
+                  <button
+                    key={opt}
+                    onClick={() => {
+                      setSortBy(opt);
+                      setShowSort(false);
+                    }}
+                    className={`hover:bg-muted w-full px-4 py-2.5 text-left text-sm ${sortBy === opt ? 'text-primary font-semibold' : ''}`}
+                  >
+                    {opt}
+                  </button>
+                ))}
               </div>
-              <Badge className={`${
-                spec.risk === "low" ? "bg-mint/10 text-mint border-mint/20" :
-                spec.risk === "medium" ? "bg-gold/10 text-gold border-gold/20" :
-                "bg-destructive/10 text-destructive border-destructive/20"
-              }`}>
-                {spec.risk === "low" ? "Rủi ro thấp" : spec.risk === "medium" ? "Rủi ro TB" : "Rủi ro cao"}
-              </Badge>
-            </div>
-
-            <p className="text-sm text-muted-foreground mb-4">{spec.description}</p>
-
-            <div className="space-y-3 mb-4">
-              <div>
-                <div className="flex justify-between text-sm mb-1">
-                  <span className="text-muted-foreground">Cơ hội việc làm</span>
-                  <span className="font-medium text-primary">{spec.opportunity}%</span>
-                </div>
-                <Progress value={spec.opportunity} className="h-2" />
-              </div>
-            </div>
-
-            <div className="flex flex-wrap gap-2 mb-4">
-              {spec.skills.map((s) => (
-                <Badge key={s} variant="secondary" className="text-xs">{s}</Badge>
-              ))}
-            </div>
-
-            <div className="p-3 rounded-xl bg-primary/5 border border-primary/10 flex items-start gap-2">
-              <Sparkles className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
-              <p className="text-xs text-muted-foreground">{spec.forecast}</p>
-            </div>
-          </motion.div>
-        ))}
-
-        {/* Warning */}
-        <div className="p-4 rounded-xl bg-gold/5 border border-gold/20 flex items-start gap-3">
-          <AlertTriangle className="w-5 h-5 text-gold flex-shrink-0 mt-0.5" />
-          <div>
-            <div className="text-sm font-medium mb-1">Lưu ý</div>
-            <p className="text-xs text-muted-foreground">
-              Dự đoán dựa trên dữ liệu thị trường hiện tại và có thể thay đổi. Hãy cập nhật thường xuyên và linh hoạt trong lộ trình phát triển của bạn.
-            </p>
+            )}
           </div>
         </div>
+
+        {/* Category tabs */}
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {CATEGORIES.map((cat) => (
+            <button
+              key={cat}
+              onClick={() => setActiveCategory(cat)}
+              className={`shrink-0 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+                activeCategory === cat
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
+              }`}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+
+        {/* Career grid */}
+        {filtered.length > 0 ? (
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {filtered.map((career, i) => (
+              <CareerCard key={career.id} career={career} index={i} />
+            ))}
+          </div>
+        ) : (
+          <div className="py-20 text-center">
+            <p className="text-muted-foreground">Không tìm thấy nghề phù hợp. Thử từ khóa khác.</p>
+          </div>
+        )}
       </div>
     </div>
   );
