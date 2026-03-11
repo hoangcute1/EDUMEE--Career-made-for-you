@@ -128,7 +128,7 @@ const PostCard = ({ post, index }: { post: (typeof posts)[0]; index: number }) =
     className="glass-card hover:shadow-elevated cursor-pointer rounded-2xl p-5 transition-shadow"
   >
     {/* Author row */}
-    <div className="mb-3 flex items-center justify-between">
+    <div className="mb-3 flex flex-wrap items-start justify-between gap-y-2">
       <div className="flex items-center gap-2.5">
         <div
           className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white ${post.authorBg}`}
@@ -140,7 +140,7 @@ const PostCard = ({ post, index }: { post: (typeof posts)[0]; index: number }) =
           <p className="text-muted-foreground text-xs">{post.authorTitle}</p>
         </div>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${post.categoryColor}`}>
           {post.category}
         </span>

@@ -118,15 +118,15 @@ const AssessmentResult = () => {
   return (
     <div className="bg-background min-h-screen pb-20">
       {/* ══ HEADER ══ */}
-      <div className="bg-gradient-card pt-10 pb-8 text-center">
+      <div className="bg-gradient-card px-4 pt-10 pb-8 text-center">
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
           <span className="inline-flex items-center gap-1.5 rounded-full bg-green-500/15 px-4 py-1.5 text-sm font-medium text-green-600 dark:text-green-400">
             <CheckCircle2 className="h-4 w-4" /> Phân tích hoàn tất
           </span>
-          <h1 className="font-display text-foreground mt-4 text-4xl font-extrabold md:text-5xl">
+          <h1 className="font-display text-foreground mt-4 text-2xl font-extrabold sm:text-4xl md:text-5xl">
             Kết quả phân tích của bạn
           </h1>
-          <p className="text-muted-foreground mt-3 text-base">
+          <p className="text-muted-foreground mt-3 text-sm sm:text-base">
             AI đã phân tích 20 câu trả lời và so sánh với 50,000+ hồ sơ nghề nghiệp
           </p>
         </motion.div>
@@ -138,7 +138,7 @@ const AssessmentResult = () => {
           <h2 className="text-foreground mb-5 flex items-center gap-2 text-xl font-bold">
             🎯 Top 3 nghề phù hợp nhất
           </h2>
-          <div className="grid gap-5 md:grid-cols-3">
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {topCareers.map((career) => (
               <div key={career.title} className="glass-card relative overflow-hidden rounded-2xl">
                 {/* Gradient top bar */}

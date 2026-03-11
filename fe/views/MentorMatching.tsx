@@ -515,13 +515,13 @@ const MentorMatching = () => {
 
         <div className="container mt-6 space-y-6">
           {/* Stats */}
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-3 gap-3">
             {[
-              { icon: Users, value: '500+', label: 'Mentor' },
+              { icon: Users, value: '500+', label: 'Mentors' },
               { icon: Video, value: '15,000+', label: 'Buổi học' },
-              { icon: Star, value: '4.8/5', label: 'Đánh giá TB' },
+              { icon: Star, value: '4.8/5', label: 'Đánh giá' },
             ].map(({ icon: Icon, value, label }) => (
-              <div key={label} className="glass-card rounded-2xl p-4 text-center">
+              <div key={label} className="glass-card rounded-2xl p-3 text-center sm:p-4">
                 <Icon className="text-primary mx-auto mb-2 h-5 w-5" />
                 <p className="text-xl font-bold">{value}</p>
                 <p className="text-muted-foreground text-xs">{label}</p>

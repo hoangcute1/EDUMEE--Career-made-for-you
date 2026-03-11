@@ -577,15 +577,15 @@ const CareerSimulation = () => {
                   <p className="text-white/80">{career.label}</p>
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-3 gap-2 sm:gap-3">
                 {[
                   { icon: DollarSign, label: 'Lương', value: level.salaryRange },
                   { icon: Clock, label: 'Thời gian', value: level.yearRange },
-                  { icon: TrendingUp, label: 'Cấp tiếp theo', value: level.nextLevel },
+                  { icon: TrendingUp, label: 'Cấp tiếp', value: level.nextLevel },
                 ].map(({ icon: Icon, label, value }) => (
                   <div
                     key={label}
-                    className="rounded-xl bg-white/20 px-3 py-2.5 text-center backdrop-blur-sm"
+                    className="rounded-xl bg-white/20 px-2 py-2 text-center backdrop-blur-sm sm:px-3 sm:py-2.5"
                   >
                     <Icon className="mx-auto mb-1 h-4 w-4 text-white/80" />
                     <p className="text-xs text-white/70">{label}</p>
@@ -646,7 +646,7 @@ const CareerSimulation = () => {
             </div>
 
             {/* Bottom 2 cards */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid gap-4 sm:grid-cols-2">
               <div className="rounded-2xl border border-red-200 bg-red-50 p-4 dark:border-red-900 dark:bg-red-950/40">
                 <div className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-red-600 dark:text-red-400">
                   <Zap className="h-4 w-4" /> Thách thức lớn nhất

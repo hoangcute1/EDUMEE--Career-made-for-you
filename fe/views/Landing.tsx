@@ -233,18 +233,23 @@ const Landing = () => {
             />
             <span>Edumee</span>
           </Link>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <Button variant="ghost" size="icon" aria-label="Chế độ sáng/tối" onClick={toggleTheme}>
               {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
             </Button>
-            <Link href="/login">
+            <Link href="/login" className="hidden sm:block">
               <Button variant="ghost" size="sm" className="text-sm font-medium">
                 Đăng nhập
               </Button>
             </Link>
             <Link href="/onboarding">
-              <Button variant="hero" size="sm" className="gap-1.5 rounded-full px-5 text-sm">
-                Bắt đầu ngay
+              <Button
+                variant="hero"
+                size="sm"
+                className="gap-1.5 rounded-full px-3 text-xs sm:px-5 sm:text-sm"
+              >
+                <span className="hidden sm:inline">Bắt đầu ngay</span>
+                <span className="sm:hidden">Bắt đầu</span>
                 <ArrowRight className="h-3.5 w-3.5" />
               </Button>
             </Link>
@@ -328,7 +333,7 @@ const Landing = () => {
               <motion.div
                 animate={{ y: [0, -10, 0] }}
                 transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-                className="glass-card absolute -top-4 -right-4 flex items-center gap-2 rounded-xl px-4 py-3"
+                className="glass-card absolute -top-4 -right-4 hidden items-center gap-2 rounded-xl px-4 py-3 sm:flex"
               >
                 <div className="bg-gradient-mint flex h-9 w-9 items-center justify-center rounded-full">
                   <TrendingUp className="text-primary-foreground h-4 w-4" />
@@ -343,7 +348,7 @@ const Landing = () => {
               <motion.div
                 animate={{ y: [0, 10, 0] }}
                 transition={{ duration: 3.5, repeat: Infinity, ease: 'easeInOut' }}
-                className="glass-card absolute -bottom-4 -left-4 flex items-center gap-2 rounded-xl px-4 py-3"
+                className="glass-card absolute -bottom-4 -left-4 hidden items-center gap-2 rounded-xl px-4 py-3 sm:flex"
               >
                 <div className="bg-gradient-accent flex h-9 w-9 items-center justify-center rounded-full">
                   <Award className="text-primary-foreground h-4 w-4" />
@@ -366,7 +371,7 @@ const Landing = () => {
             initial="hidden"
             whileInView="show"
             viewport={{ once: true }}
-            className="grid gap-6 sm:grid-cols-3"
+            className="grid gap-4 sm:grid-cols-3"
           >
             {stats.map((stat) => (
               <motion.div
@@ -414,7 +419,7 @@ const Landing = () => {
             initial="hidden"
             whileInView="show"
             viewport={{ once: true }}
-            className="grid gap-8 md:grid-cols-3"
+            className="grid gap-6 sm:grid-cols-2 md:grid-cols-3"
           >
             {steps.map((step, i) => (
               <motion.div key={step.num} variants={fadeUp} className="relative">
@@ -531,7 +536,7 @@ const Landing = () => {
             initial="hidden"
             whileInView="show"
             viewport={{ once: true }}
-            className="grid gap-8 md:grid-cols-3"
+            className="grid gap-6 sm:grid-cols-2 md:grid-cols-3"
           >
             {careerPreviews.map((career) => (
               <motion.div key={career.title} variants={scaleIn}>
@@ -611,7 +616,7 @@ const Landing = () => {
             initial="hidden"
             whileInView="show"
             viewport={{ once: true }}
-            className="grid gap-6 md:grid-cols-3"
+            className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
           >
             {testimonials.map((t) => (
               <motion.div key={t.name} variants={fadeUp}>

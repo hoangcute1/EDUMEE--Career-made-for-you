@@ -345,17 +345,17 @@ const Specialization = () => {
 
       <div className="container mt-6 space-y-5">
         {/* Search + Sort */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           <div className="relative flex-1">
             <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Tìm kiếm nghề nghiệp..."
+              placeholder="Tìm kiếm nghề..."
               className="border-input bg-background focus:ring-ring h-10 w-full rounded-xl border pr-4 pl-9 text-sm outline-none focus:ring-2"
             />
           </div>
-          <Button variant="outline" size="sm" className="shrink-0 gap-1.5">
+          <Button variant="outline" size="sm" className="hidden shrink-0 gap-1.5 sm:flex">
             <Filter className="h-4 w-4" /> Lọc
           </Button>
           <div className="relative shrink-0">
@@ -365,7 +365,9 @@ const Specialization = () => {
               className="gap-1.5"
               onClick={() => setShowSort((v) => !v)}
             >
-              Sắp xếp: {sortBy} <ChevronDown className="h-4 w-4" />
+              <span className="hidden sm:inline">Sắp xếp: {sortBy}</span>
+              <span className="sm:hidden">{sortBy.split(' ')[0]}</span>
+              <ChevronDown className="h-4 w-4" />
             </Button>
             {showSort && (
               <div className="border-border bg-background absolute right-0 z-10 mt-1 w-52 rounded-xl border shadow-lg">
