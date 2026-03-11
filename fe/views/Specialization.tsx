@@ -14,6 +14,16 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from '@/components/ui/dialog';
 
 /* ─── Data ─── */
 const CATEGORIES = [
@@ -46,6 +56,13 @@ const careers = [
     demandStars: 4,
     skills: ['JavaScript', 'Python', 'React', 'Node.js'],
     aiInsight: 'AI và automation sẽ thay đổi nhưng không thay thế kỹ sư phần mềm.',
+    roadmap: [
+      'Học căn bản: HTML/CSS, JavaScript',
+      'Học lập trình nâng cao: Data structures, algorithms',
+      'Thành thạo framework: React / Node.js',
+      'Xây dự án thực tế và portfolio',
+      'Ứng tuyển vị trí Junior/Intern',
+    ],
   },
   {
     id: 'data-scientist',
@@ -62,6 +79,13 @@ const careers = [
     demandStars: 5,
     skills: ['Python', 'SQL', 'Machine Learning', 'Statistics'],
     aiInsight: 'Nhu cầu tăng mạnh trong mọi ngành cần chuyên sâu về dữ liệu.',
+    roadmap: [
+      'Học Python và thống kê cơ bản',
+      'Học SQL và xử lý dữ liệu',
+      'Học Machine Learning cơ bản',
+      'Thực hành trên dự án/competitions',
+      'Xây portfolio và apply vị trí Data Analyst',
+    ],
   },
   {
     id: 'ai-ml-engineer',
@@ -78,6 +102,13 @@ const careers = [
     demandStars: 5,
     skills: ['Deep Learning', 'TensorFlow', 'Python', 'Research'],
     aiInsight: 'Lĩnh vực hot nhất thập kỷ với lương tầm cao và xuất sắc.',
+    roadmap: [
+      'Nền tảng toán, xác suất và Python',
+      'Học deep learning và frameworks (TensorFlow/PyTorch)',
+      'Thực hiện research/demo models',
+      'Triển khai model vào sản phẩm',
+      'Chuẩn hoá CV, apply roles AI/ML Engineer',
+    ],
   },
   {
     id: 'product-manager',
@@ -94,6 +125,13 @@ const careers = [
     demandStars: 4,
     skills: ['Strategy', 'Agile', 'Data Analysis', 'Communication'],
     aiInsight: 'Vai trò không thể thiếu trong mọi công ty công nghệ.',
+    roadmap: [
+      'Học kỹ năng quản lý sản phẩm cơ bản',
+      'Thực hành với Agile và roadmap planning',
+      'Học phân tích dữ liệu để đưa quyết định',
+      'Làm sản phẩm nhỏ hoặc PM-assistant',
+      'Ứng tuyển Product Manager Junior',
+    ],
   },
   {
     id: 'ux-ui-designer',
@@ -110,6 +148,13 @@ const careers = [
     demandStars: 4,
     skills: ['Figma', 'User Research', 'Prototyping', 'Design System'],
     aiInsight: 'AI tools hỗ trợ nhưng không thay thế creative thinking.',
+    roadmap: [
+      'Học công cụ thiết kế: Figma, Sketch',
+      'Học research người dùng và prototyping',
+      'Xây portfolio gồm case studies',
+      'Học hệ thống design và accessibility',
+      'Ứng tuyển UX/UI Designer vị trí Junior',
+    ],
   },
   {
     id: 'marketing-manager',
@@ -126,6 +171,13 @@ const careers = [
     demandStars: 4,
     skills: ['Digital Marketing', 'Content', 'Analytics', 'SEO/SEM'],
     aiInsight: 'Digital marketing và AI marketing đang bùng nổ tại Việt Nam.',
+    roadmap: [
+      'Học cơ bản Digital Marketing và content',
+      'Thực hành SEO/SEM và analytics',
+      'Chạy campaign thực tế và đo lường',
+      'Xây case studies và kết quả',
+      'Ứng tuyển Marketing roles hoặc freelancing',
+    ],
   },
   {
     id: 'architect',
@@ -142,6 +194,13 @@ const careers = [
     demandStars: 3,
     skills: ['AutoCAD', 'Revit', 'Thiết kế', 'BIM'],
     aiInsight: 'Sustainable architecture và smart building đang là xu hướng mới.',
+    roadmap: [
+      'Học AutoCAD, Revit cơ bản',
+      'Thực hành thiết kế và mã hóa bản vẽ',
+      'Học BIM và sustainable design',
+      'Làm thực tập hoặc dự án hợp tác',
+      'Apply vị trí kiến trúc sư junior',
+    ],
   },
   {
     id: 'doctor',
@@ -158,6 +217,13 @@ const careers = [
     demandStars: 5,
     skills: ['Y học', 'Chẩn đoán', 'Phẫu thuật', 'Giao tiếp'],
     aiInsight: 'AI hỗ trợ chẩn đoán nhưng bác sĩ là nền tảng không thể thay thế.',
+    roadmap: [
+      'Hoàn thành chương trình y khoa cơ bản',
+      'Thực tập lâm sàng và chuyên ngành',
+      'Học kỹ năng giao tiếp và chẩn đoán',
+      'Tham gia đào tạo specialist nếu cần',
+      'Ứng tuyển/residency hoặc công tác tại bệnh viện',
+    ],
   },
   {
     id: 'lawyer',
@@ -174,8 +240,17 @@ const careers = [
     demandStars: 3,
     skills: ['Luật pháp', 'Nghiên cứu', 'Tranh tụng', 'Tư vấn'],
     aiInsight: 'Legal tech và AI đang thay đổi cách ngành luật vận hành.',
+    roadmap: [
+      'Hoàn thiện nền tảng luật cơ bản',
+      'Thực hành nghiên cứu và soạn thảo',
+      'Học kỹ năng tranh tụng và tư vấn',
+      'Thực tập tại firm hoặc in-house',
+      'Apply vị trí junior lawyer / counsel',
+    ],
   },
 ];
+
+type Career = (typeof careers)[number];
 
 /* ─── Match color gradient helper ─── */
 const matchGradient = (match: number) => {
@@ -205,7 +280,15 @@ const Stars = ({ count }: { count: number }) => (
 );
 
 /* ─── Career Card ─── */
-const CareerCard = ({ career, index }: { career: (typeof careers)[0]; index: number }) => (
+const CareerCard = ({
+  career,
+  index,
+  onOpen,
+}: {
+  career: (typeof careers)[0];
+  index: number;
+  onOpen: (c: (typeof careers)[0]) => void;
+}) => (
   <motion.div
     initial={{ opacity: 0, y: 20 }}
     animate={{ opacity: 1, y: 0 }}
@@ -283,11 +366,13 @@ const CareerCard = ({ career, index }: { career: (typeof careers)[0]; index: num
 
       {/* Buttons */}
       <div className="mt-auto flex gap-2">
-        <Link href="/learning-roadmap" className="flex-1">
-          <Button variant="hero" size="sm" className="w-full gap-1.5">
-            <MapPin className="h-3.5 w-3.5" /> Lộ trình
+        <button className="flex-1" onClick={() => onOpen(career)}>
+          <Button asChild variant="hero" size="sm" className="w-full gap-1.5">
+            <span>
+              <MapPin className="h-3.5 w-3.5" /> Lộ trình
+            </span>
           </Button>
-        </Link>
+        </button>
         <Link href="/career-compare">
           <Button variant="outline" size="sm" className="gap-1.5">
             <GitCompare className="h-3.5 w-3.5" /> So sánh
@@ -304,6 +389,9 @@ const Specialization = () => {
   const [activeCategory, setActiveCategory] = useState('Tất cả');
   const [sortBy, setSortBy] = useState(SORT_OPTIONS[0]);
   const [showSort, setShowSort] = useState(false);
+  const router = useRouter();
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedCareer, setSelectedCareer] = useState<Career | null>(null);
 
   const filtered = useMemo(() => {
     let list = careers;
@@ -409,7 +497,15 @@ const Specialization = () => {
         {filtered.length > 0 ? (
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {filtered.map((career, i) => (
-              <CareerCard key={career.id} career={career} index={i} />
+              <CareerCard
+                key={career.id}
+                career={career}
+                index={i}
+                onOpen={(c) => {
+                  setSelectedCareer(c);
+                  setDialogOpen(true);
+                }}
+              />
             ))}
           </div>
         ) : (
@@ -418,6 +514,43 @@ const Specialization = () => {
           </div>
         )}
       </div>
+      {/* Confirm roadmap dialog */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Xác nhận lộ trình</DialogTitle>
+            <DialogDescription>
+              Bạn sẽ xem lộ trình cho nghề: <strong>{selectedCareer?.title}</strong>
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="mt-2 text-sm">
+            <p>
+              Bạn có muốn theo lộ trình này cho nghề: <strong>{selectedCareer?.title}</strong>?
+            </p>
+            <p className="text-muted-foreground mt-2 text-xs">
+              Bạn sẽ được điều hướng tới trang lộ trình để xem chi tiết và bắt đầu.
+            </p>
+          </div>
+
+          <DialogFooter>
+            <DialogClose>
+              <Button variant="ghost">Huỷ</Button>
+            </DialogClose>
+            <Button
+              variant="hero"
+              onClick={() => {
+                if (selectedCareer) {
+                  router.push(`/learning-roadmap?career=${selectedCareer.id}`);
+                }
+                setDialogOpen(false);
+              }}
+            >
+              Xác nhận
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
