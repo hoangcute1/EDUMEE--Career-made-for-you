@@ -18,45 +18,154 @@ import { useState } from 'react';
 const roadmapData = [
   {
     phase: 'Tháng 1–3',
-    title: 'Nền tảng cơ bản',
-    status: 'current',
-    progress: 35,
+    title: 'Nền tảng & Công cụ',
+    status: 'completed',
+    progress: 100,
     milestones: [
-      { title: 'HTML/CSS nâng cao', done: true, desc: 'Responsive design, Flexbox, Grid' },
-      { title: 'JavaScript cơ bản', done: true, desc: 'Variables, functions, DOM' },
-      { title: 'React cơ bản', done: false, desc: 'Components, props, state' },
-      { title: 'Dự án: Portfolio cá nhân', done: false, desc: 'Xây dựng portfolio đầu tiên' },
+      {
+        title: 'HTML/CSS cơ bản → nâng cao',
+        done: true,
+        desc: 'Responsive, Flexbox, Grid, accessibility',
+        tasks: [
+          'Box model & layout',
+          'Flexbox exercises',
+          'Grid basics',
+          'Accessibility checklist',
+        ],
+      },
+      {
+        title: 'JavaScript cơ bản',
+        done: true,
+        desc: 'ES6+, DOM, async/await',
+        tasks: [
+          'Variables & scope',
+          'Functions & closures',
+          'DOM manipulation',
+          'Fetch + async/await',
+        ],
+      },
+      {
+        title: 'Git + GitHub',
+        done: true,
+        desc: 'Branching, PR, collaboration',
+        tasks: [
+          'Init repo & commits',
+          'Branching workflow',
+          'Open PR & review',
+          'Resolve merge conflicts',
+        ],
+      },
+      {
+        title: 'Mini project: Portfolio',
+        done: true,
+        desc: 'Host trên GitHub Pages/Vercel',
+        tasks: ['Design layout', 'Implement pages', 'Deploy to Vercel', 'Write README & showcase'],
+      },
     ],
-    skills: ['HTML/CSS', 'JavaScript', 'React Basics', 'Git'],
-    kpi: 'Hoàn thành 1 dự án portfolio & push lên GitHub',
+    skills: ['HTML/CSS', 'JavaScript', 'Git'],
+    kpi: 'Hoàn thành portfolio cơ bản và repo gọn gàng',
   },
   {
     phase: 'Tháng 4–6',
-    title: 'Phát triển kỹ năng',
-    status: 'locked',
-    progress: 0,
+    title: 'Frontend & Tooling',
+    status: 'current',
+    progress: 35,
     milestones: [
-      { title: 'React nâng cao', done: false, desc: 'Hooks, Context, Router' },
-      { title: 'TypeScript', done: false, desc: 'Types, interfaces, generics' },
-      { title: 'API & Backend cơ bản', done: false, desc: 'REST API, fetch, authentication' },
-      { title: 'Dự án: Todo App fullstack', done: false, desc: 'CRUD với database' },
+      {
+        title: 'React cơ bản → nâng cao',
+        done: false,
+        desc: 'Components, hooks, router, performance',
+        tasks: ['Create components', 'UseState & UseEffect', 'React Router', 'Optimize renders'],
+      },
+      {
+        title: 'TypeScript cơ bản',
+        done: false,
+        desc: 'Types, interfaces, generics',
+        tasks: ['Types for props', 'Interfaces vs types', 'Generics examples'],
+      },
+      {
+        title: 'State management',
+        done: false,
+        desc: 'Context, Redux hoặc Zustand',
+        tasks: ['Context API', 'Redux basics', 'Zustand intro'],
+      },
+      {
+        title: 'Project: SPA có state & routing',
+        done: false,
+        desc: 'Deploy có CI',
+        tasks: ['Design app routes', 'Implement state flows', 'Set up GitHub Actions'],
+      },
     ],
-    skills: ['React Advanced', 'TypeScript', 'REST APIs', 'Database'],
-    kpi: 'Hoàn thành 1 fullstack app & deploy live',
+    skills: ['React', 'TypeScript', 'State Management'],
+    kpi: 'Deploy 1 SPA có state + CI/CD',
   },
   {
     phase: 'Tháng 7–12',
-    title: 'Chuyên sâu & Thực chiến',
+    title: 'Backend & Fullstack',
     status: 'locked',
     progress: 0,
     milestones: [
-      { title: 'State management', done: false, desc: 'Redux/Zustand, server state' },
-      { title: 'Testing', done: false, desc: 'Unit tests, integration tests' },
-      { title: 'Performance', done: false, desc: 'Optimization, lazy loading' },
-      { title: 'Dự án: E-commerce hoặc SaaS', done: false, desc: 'Dự án lớn thực tế' },
+      {
+        title: 'Node.js + Express (hoặc Nest)',
+        done: false,
+        desc: 'REST API, auth, validation',
+        tasks: ['Setup server', 'Routes & controllers', 'JWT auth'],
+      },
+      {
+        title: 'Database cơ bản',
+        done: false,
+        desc: 'Postgres / Mongo, ORM',
+        tasks: ['Schema design', 'CRUD queries', 'Use ORM (Prisma/TypeORM/Mongoose)'],
+      },
+      {
+        title: 'Testing & TDD',
+        done: false,
+        desc: 'Unit + integration tests',
+        tasks: ['Write unit tests', 'Integration tests with DB', 'Mocking'],
+      },
+      {
+        title: 'Project: Fullstack CRUD App',
+        done: false,
+        desc: 'Auth + DB + Deployment',
+        tasks: ['Design feature list', 'Implement backend & frontend', 'Deploy & monitor'],
+      },
     ],
-    skills: ['State Management', 'Testing', 'CI/CD', 'Performance'],
-    kpi: 'Đóng góp open-source & hoàn thành 1 dự án thực tế lớn',
+    skills: ['Node.js', 'Databases', 'Testing', 'Deployment'],
+    kpi: 'Hoàn thành 1 fullstack app production-ready',
+  },
+  {
+    phase: 'Năm 2',
+    title: 'Chuyên sâu & Chuẩn bị tuyển dụng',
+    status: 'locked',
+    progress: 0,
+    milestones: [
+      {
+        title: 'System Design cơ bản',
+        done: false,
+        desc: 'Scalability, caching, load balancing',
+        tasks: ['Read system-design primer', 'Draw architecture diagrams', 'Discuss trade-offs'],
+      },
+      {
+        title: 'Algorithms & LeetCode (medium)',
+        done: false,
+        desc: 'Practice interview problems',
+        tasks: ['Array & strings', 'Trees & graphs', 'Dynamic programming basics'],
+      },
+      {
+        title: 'Performance & Security',
+        done: false,
+        desc: 'Profiling, OWASP basics',
+        tasks: ['Use profiler', 'Fix bottlenecks', 'Learn OWASP Top10'],
+      },
+      {
+        title: 'Portfolio nâng cao & Open-source',
+        done: false,
+        desc: 'Projects with tests and docs',
+        tasks: ['Add tests', 'Write docs', 'Publish project'],
+      },
+    ],
+    skills: ['System Design', 'Algorithms', 'Security'],
+    kpi: 'Sẵn sàng phỏng vấn: pass coding + system-design interviews',
   },
 ];
 
@@ -71,9 +180,7 @@ const LearningRoadmap = () => {
             <div className="bg-primary/10 text-primary mb-3 inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm">
               <BookOpen className="h-4 w-4" /> Lộ trình cá nhân hóa
             </div>
-            <h1 className="font-display text-2xl font-bold md:text-3xl">
-              Lộ trình Frontend Developer
-            </h1>
+            <h1 className="font-display text-2xl font-bold md:text-3xl">Lộ trình Kĩ sư Phần Mềm</h1>
             <p className="text-muted-foreground mt-1">Dựa trên profile và mục tiêu của bạn</p>
           </motion.div>
         </div>
@@ -94,8 +201,8 @@ const LearningRoadmap = () => {
               className={`glass-card overflow-hidden rounded-2xl ${isLocked ? 'opacity-60' : ''}`}
             >
               <button
-                onClick={() => !isLocked && setExpanded(isExpanded ? null : i)}
-                className={`flex w-full items-center gap-4 p-6 text-left ${isLocked ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+                onClick={() => setExpanded(isExpanded ? null : i)}
+                className={`flex w-full cursor-pointer items-center gap-4 p-6 text-left`}
               >
                 <div
                   className={`flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl ${
@@ -114,7 +221,12 @@ const LearningRoadmap = () => {
                   <div className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
                     {phase.phase}
                   </div>
-                  <div className="text-lg font-semibold">{phase.title}</div>
+                  <div className="text-lg font-semibold">
+                    {phase.title}
+                    {isLocked && (
+                      <Lock className="text-muted-foreground ml-2 inline-block h-4 w-4" />
+                    )}
+                  </div>
                   {isCurrent && (
                     <Progress value={phase.progress} className="mt-2 h-1.5 max-w-[200px]" />
                   )}
@@ -155,6 +267,13 @@ const LearningRoadmap = () => {
                             {m.title}
                           </div>
                           <div className="text-muted-foreground text-xs">{m.desc}</div>
+                          {m.tasks && (
+                            <ul className="text-muted-foreground mt-2 ml-4 list-disc text-xs">
+                              {m.tasks.map((t, ti) => (
+                                <li key={ti}>{t}</li>
+                              ))}
+                            </ul>
+                          )}
                         </div>
                       </div>
                     ))}
