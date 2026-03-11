@@ -5,7 +5,11 @@ import { motion } from 'framer-motion';
 import {
   ArrowRight,
   Award,
+  BarChart2,
+  Bell,
   BookOpen,
+  CheckCircle2,
+  Clock,
   Compass,
   GitCompare,
   MapPin,
@@ -18,6 +22,61 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useSyncExternalStore } from 'react';
+
+const headerStats = [
+  {
+    value: '3',
+    label: 'Bài trắc nghiệm',
+    icon: CheckCircle2,
+    color: 'text-blue-500',
+    bg: 'bg-blue-500/10',
+  },
+  {
+    value: '12',
+    label: 'Nghề đã xem',
+    icon: BarChart2,
+    color: 'text-violet-500',
+    bg: 'bg-violet-500/10',
+  },
+  {
+    value: '5',
+    label: 'Ngày học liên tiếp',
+    icon: TrendingUp,
+    color: 'text-green-500',
+    bg: 'bg-green-500/10',
+  },
+  {
+    value: '1',
+    label: 'Buổi mentor',
+    icon: Users,
+    color: 'text-orange-500',
+    bg: 'bg-orange-500/10',
+  },
+];
+
+const recommendations = [
+  {
+    title: 'React Hooks chuyên sâu',
+    meta: '20 bài',
+    type: 'Khóa học',
+    match: 96,
+    dotColor: 'bg-blue-400',
+  },
+  {
+    title: 'TypeScript cho Beginners',
+    meta: '40 bài',
+    type: 'Video series',
+    match: 91,
+    dotColor: 'bg-violet-400',
+  },
+  {
+    title: 'System Design Interview',
+    meta: 'Đọc',
+    type: 'Sách',
+    match: 85,
+    dotColor: 'bg-orange-400',
+  },
+];
 
 const journeySteps = [
   {
@@ -113,8 +172,34 @@ const Dashboard = () => {
       <div className="bg-gradient-card">
         <div className="container py-8">
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-            <p className="text-muted-foreground mb-1">Xin chào 👋</p>
-            <h1 className="font-display text-2xl font-bold md:text-3xl">Hành trình của bạn</h1>
+            <div className="mb-5 flex items-center justify-between">
+              <div>
+                <p className="text-muted-foreground mb-1">Xin chào 👋</p>
+                <h1 className="font-display text-2xl font-bold md:text-3xl">Hành trình của bạn</h1>
+              </div>
+              <button className="relative rounded-full p-2 transition-colors hover:bg-white/10">
+                <Bell className="h-6 w-6" />
+                <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-red-500" />
+              </button>
+            </div>
+          </motion.div>
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="grid grid-cols-4 gap-3"
+          >
+            {headerStats.map((stat) => (
+              <div key={stat.value} className="glass-card rounded-xl p-3 text-center">
+                <div
+                  className={`mx-auto mb-1 flex h-8 w-8 items-center justify-center rounded-full ${stat.bg}`}
+                >
+                  <stat.icon className={`h-4 w-4 ${stat.color}`} />
+                </div>
+                <div className="font-display text-xl font-bold">{stat.value}</div>
+                <div className="text-muted-foreground text-xs leading-tight">{stat.label}</div>
+              </div>
+            ))}
           </motion.div>
         </div>
       </div>
@@ -244,10 +329,15 @@ const Dashboard = () => {
               transition={{ delay: 0.5 }}
               className="glass-card rounded-2xl p-6"
             >
-              <h2 className="font-display mb-4 flex items-center gap-2 text-lg font-semibold">
-                <Award className="text-gold h-5 w-5" />
-                Thành tựu
-              </h2>
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="font-display flex items-center gap-2 text-lg font-semibold">
+                  <Award className="text-gold h-5 w-5" />
+                  Thành tựu
+                </h2>
+                <span className="text-muted-foreground text-sm">
+                  {badges.filter((b) => b.earned).length}/{badges.length} đã mở khóa
+                </span>
+              </div>
               <div className="flex gap-4 overflow-x-auto pb-2">
                 {badges.map((badge, i) => (
                   <div
@@ -262,6 +352,79 @@ const Dashboard = () => {
                       <badge.icon className="h-6 w-6" />
                     </div>
                     <div className="max-w-[70px] text-xs font-medium">{badge.label}</div>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+
+            {/* Learning Roadmap */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.6 }}
+              className="glass-card rounded-2xl p-6"
+            >
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="font-display flex items-center gap-2 text-lg font-semibold">
+                  <Clock className="text-primary h-5 w-5" />
+                  Lộ trình học tập
+                </h2>
+                <Link href="/learning-roadmap">
+                  <Button variant="ghost" size="sm" className="text-primary gap-1">
+                    Xem thêm <ArrowRight className="h-3 w-3" />
+                  </Button>
+                </Link>
+              </div>
+
+              <div className="mb-4">
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="text-primary text-sm font-medium">Nền tảng lập trình</span>
+                  <span className="text-sm font-bold">65%</span>
+                </div>
+                <div className="bg-muted h-2 overflow-hidden rounded-full">
+                  <div className="bg-gradient-hero h-full w-[65%] rounded-full" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div className="bg-primary/5 rounded-xl p-3 text-center">
+                  <div className="font-display text-primary text-xl font-bold">13</div>
+                  <div className="text-muted-foreground text-xs">Đã hoàn thành</div>
+                </div>
+                <div className="bg-secondary/5 rounded-xl p-3 text-center">
+                  <div className="font-display text-secondary text-xl font-bold">7</div>
+                  <div className="text-muted-foreground text-xs">Đang học</div>
+                </div>
+                <div className="bg-muted rounded-xl p-3 text-center">
+                  <div className="font-display text-xl font-bold">60</div>
+                  <div className="text-muted-foreground text-xs">Còn lại</div>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Recommendations */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.7 }}
+              className="glass-card rounded-2xl p-6"
+            >
+              <h2 className="font-display mb-4 flex items-center gap-2 text-lg font-semibold">
+                <BookOpen className="text-primary h-5 w-5" />
+                Được gợi ý cho bạn
+              </h2>
+              <div className="space-y-3">
+                {recommendations.map((rec, i) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <div className={`h-2 w-2 flex-shrink-0 rounded-full ${rec.dotColor}`} />
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-medium">{rec.title}</div>
+                      <div className="text-muted-foreground text-xs">{rec.meta}</div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="bg-muted rounded-full px-2 py-0.5 text-xs">{rec.type}</span>
+                      <span className="text-primary text-sm font-bold">{rec.match}%</span>
+                    </div>
                   </div>
                 ))}
               </div>

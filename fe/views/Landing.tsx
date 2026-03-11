@@ -354,6 +354,35 @@ const Landing = () => {
         </div>
       </section>
 
+      {/* ═══ STATISTICS ═══ */}
+      <section className="py-16">
+        <div className="container">
+          <motion.div
+            variants={stagger}
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true }}
+            className="grid gap-6 sm:grid-cols-3"
+          >
+            {stats.map((stat) => (
+              <motion.div
+                key={stat.label}
+                variants={fadeUp}
+                className="glass-card rounded-2xl p-8 text-center"
+              >
+                <div className="bg-primary/10 mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full">
+                  <stat.icon className="text-primary h-7 w-7" />
+                </div>
+                <div className="font-display text-gradient-hero text-4xl font-extrabold">
+                  {stat.value}
+                </div>
+                <div className="text-muted-foreground mt-1 text-sm font-medium">{stat.label}</div>
+              </motion.div>
+            ))}
+          </motion.div>
+        </div>
+      </section>
+
       {/* ═══ HOW IT WORKS ═══ */}
       <section className="py-24 md:py-32">
         <div className="container">
@@ -560,31 +589,6 @@ const Landing = () => {
       <section className="relative py-24 md:py-32">
         <div className="bg-gradient-card absolute inset-0 opacity-30" />
         <div className="relative container">
-          {/* Stats */}
-          <motion.div
-            variants={stagger}
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true }}
-            className="mb-20 grid gap-6 sm:grid-cols-3"
-          >
-            {stats.map((stat) => (
-              <motion.div
-                key={stat.label}
-                variants={fadeUp}
-                className="glass-card rounded-2xl p-8 text-center"
-              >
-                <div className="bg-primary/10 mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full">
-                  <stat.icon className="text-primary h-7 w-7" />
-                </div>
-                <div className="font-display text-gradient-hero text-4xl font-extrabold">
-                  {stat.value}
-                </div>
-                <div className="text-muted-foreground mt-1 text-sm font-medium">{stat.label}</div>
-              </motion.div>
-            ))}
-          </motion.div>
-
           {/* Testimonials */}
           <motion.div
             variants={fadeUp}
