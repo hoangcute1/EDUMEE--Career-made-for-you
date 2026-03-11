@@ -224,10 +224,14 @@ const Landing = () => {
       <nav className="bg-background/80 fixed top-0 right-0 left-0 z-50 border-b border-white/10 backdrop-blur-xl">
         <div className="container flex h-16 items-center justify-between">
           <Link href="/" className="font-display flex items-center gap-2 text-xl font-bold">
-            <div className="bg-gradient-hero flex h-8 w-8 items-center justify-center rounded-lg">
-              <Sparkles className="h-4 w-4 text-white" />
-            </div>
-            <span>EDUMEE</span>
+            <Image
+              src="/edumee-logo-icon.svg"
+              alt="Edumee logo"
+              width={30}
+              height={28}
+              className="flex-shrink-0"
+            />
+            <span>Edumee</span>
           </Link>
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="icon" aria-label="Chế độ sáng/tối" onClick={toggleTheme}>

@@ -3,7 +3,8 @@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { motion } from 'framer-motion';
-import { ArrowRight, Eye, EyeOff, Lock, Mail, Sparkles, User } from 'lucide-react';
+import { ArrowRight, Eye, EyeOff, Lock, Mail, User } from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
@@ -48,8 +49,8 @@ const Register = () => {
       >
         <div className="glass-card rounded-2xl p-8">
           <div className="mb-8 text-center">
-            <div className="bg-gradient-hero mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl">
-              <Sparkles className="text-primary-foreground h-7 w-7" />
+            <div className="mb-4 flex justify-center">
+              <Image src="/edumee-logo-icon.svg" alt="Edumee logo" width={56} height={52} />
             </div>
             <h1 className="font-display text-2xl font-bold">Tạo tài khoản mới</h1>
             <p className="text-muted-foreground mt-1 text-sm">

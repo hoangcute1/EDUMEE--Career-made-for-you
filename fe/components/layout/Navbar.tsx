@@ -11,13 +11,13 @@ import {
   GraduationCap,
   Menu,
   Moon,
-  Sparkles,
   Sun,
   TrendingUp,
   User,
   Users,
   X,
 } from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useCallback, useState, useSyncExternalStore } from 'react';
@@ -78,10 +78,14 @@ const Navbar = () => {
     <nav className="glass-card sticky top-0 z-50 border-b">
       <div className="container flex h-16 items-center justify-between">
         <Link href="/" className="font-display flex items-center gap-2 text-xl font-bold">
-          <div className="bg-gradient-hero flex h-8 w-8 items-center justify-center rounded-lg">
-            <Sparkles className="text-primary-foreground h-5 w-5" />
-          </div>
-          <span className="text-gradient-hero">EDUMEE</span>
+          <Image
+            src="/edumee-logo-icon.svg"
+            alt="Edumee logo"
+            width={32}
+            height={30}
+            className="flex-shrink-0"
+          />
+          <span className="text-gradient-hero">Edumee</span>
         </Link>
 
         {/* Desktop nav */}

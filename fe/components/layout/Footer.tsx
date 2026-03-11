@@ -1,4 +1,5 @@
-import { Heart, Sparkles } from 'lucide-react';
+import { Heart } from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
 
 const FEATURES = [
@@ -24,10 +25,14 @@ export default function Footer() {
           {/* Brand — spans 2 cols */}
           <div className="sm:col-span-2">
             <Link href="/" className="font-display mb-3 flex items-center gap-2 text-lg font-bold">
-              <div className="bg-gradient-hero flex h-8 w-8 items-center justify-center rounded-lg">
-                <Sparkles className="h-4 w-4 text-white" />
-              </div>
-              EDUMEE
+              <Image
+                src="/edumee-logo-icon.svg"
+                alt="Edumee logo"
+                width={28}
+                height={26}
+                className="flex-shrink-0"
+              />
+              Edumee
             </Link>
             <p className="text-muted-foreground max-w-xs text-sm leading-relaxed">
               Nền tảng AI tư vấn nghề nghiệp hàng đầu Việt Nam, giúp học sinh và sinh viên tìm con
